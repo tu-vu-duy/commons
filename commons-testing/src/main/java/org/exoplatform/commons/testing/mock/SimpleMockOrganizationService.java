@@ -475,6 +475,16 @@ public class SimpleMockOrganizationService implements OrganizationService {
     public void setUserName(String s) {
 
     }
+
+    @Override
+    public String getDisplayName() {
+      return name;
+    }
+
+    @Override
+    public void setDisplayName(String displayName) {
+      
+    }
   }
 
   static class SimpleGroup implements Group {
