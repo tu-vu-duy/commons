@@ -42,7 +42,7 @@ public class TemplateCaching {
           new Loader<ElementCacheKey, Element, Object>() {
       @Override
       public Element retrieve(Object service, ElementCacheKey key) throws Exception {
-        return TemplateUtils.loadGroovyElement(key.getPlugId(), key.getLanguage());
+        return TemplateUtils.loadGroovyElement(key.getPlugId(), key.getChildId(), key.getLanguage());
       }
     };
     futureExoCache = new FutureExoCache<ElementCacheKey, Element, Object>(loader, templateCache);

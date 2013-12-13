@@ -42,7 +42,9 @@ public class TemplateConfig {
 
   private String              templatePath;
 
-  private Map<String, String> keyMapping               = new HashMap<String, String>();
+  private Map<String, String> keyMapping                = new HashMap<String, String>();
+
+  private Map<String, String> templatePathChildren      = new HashMap<String, String>();
 
   public TemplateConfig() {
     bundlePath = DEFAULT_SRC_RESOURCE_BUNDLE_KEY;
@@ -124,6 +126,32 @@ public class TemplateConfig {
       return keyMapping.get(key);
     }
     return defaultValue;
+  }
+
+  /**
+   * @return the templatePathChildren
+   */
+  public Map<String, String> getTemplatePathChildren() {
+    return templatePathChildren;
+  }
+  
+  /**
+   * @param templatePathChildren the templatePathChildren to set
+   */
+  public void setTemplatePathChildren(Map<String, String> templatePathChildren) {
+    this.templatePathChildren = templatePathChildren;
+  }
+  
+  public TemplateConfig addPathChild(String templateId, String srcTemplate) {
+    this.templatePathChildren.put(templateId, srcTemplate);
+    return this;
+  }
+  
+  public String getTemplatePathChild(String key) {
+    if (templatePathChildren.containsKey(key)) {
+      return templatePathChildren.get(key);
+    }
+    return null;
   }
 
   @Override

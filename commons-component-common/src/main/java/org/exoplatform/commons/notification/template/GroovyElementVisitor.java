@@ -40,6 +40,7 @@ public class GroovyElementVisitor implements ElementVisitor {
   @Override
   public ElementVisitor visit(Element element) {
     this.ctx.put("_ctx", element);
+    ((GroovyElement) element).setCurrentVisitor(this);
     TemplateUtils.loadGroovy(this.getTemplateContext(), element, getWriter());
     return this;
   }

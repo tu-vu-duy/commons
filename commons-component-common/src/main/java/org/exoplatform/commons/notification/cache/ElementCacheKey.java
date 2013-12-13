@@ -21,6 +21,8 @@ public class ElementCacheKey extends ScopeCacheKey {
 
   private final String      pluinId;
 
+  private final String      childId;
+
   private final String      language;
 
   public ElementCacheKey(String key) {
@@ -30,6 +32,13 @@ public class ElementCacheKey extends ScopeCacheKey {
   public ElementCacheKey(String pluginId, String language) {
     this.pluinId = pluginId;
     this.language = language;
+    this.childId = null;
+  }
+
+  public ElementCacheKey(String pluginId, String childId, String language) {
+    this.pluinId = pluginId;
+    this.childId = childId;
+    this.language = language;
   }
   
   public String getLanguage() {
@@ -38,6 +47,10 @@ public class ElementCacheKey extends ScopeCacheKey {
   
   public String getPlugId() {
     return pluinId;
+  }
+
+  public String getChildId() {
+    return childId;
   }
 
   @Override
@@ -53,6 +66,8 @@ public class ElementCacheKey extends ScopeCacheKey {
 
     if (pluinId != null ? !pluinId.equals(that.pluinId) : that.pluinId != null)
       return false;
+    if (childId != null ? !childId.equals(that.childId) : that.childId != null)
+      return false;
     if (language != null ? !language.equals(that.language) : that.language != null)
       return false;
 
@@ -64,6 +79,7 @@ public class ElementCacheKey extends ScopeCacheKey {
     int result = super.hashCode();
     result = 31 * result + (language != null ? language.hashCode() : 0);
     result = 31 * result + (pluinId != null ? pluinId.hashCode() : 0);
+    result = 31 * result + (childId != null ? childId.hashCode() : 0);
     return result;
   }
 

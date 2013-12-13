@@ -60,7 +60,7 @@ public class TemplateUtils {
   private static final int MAX_SUBJECT_LENGTH = 50;
   
   /**
-   * Process the Groovy template ascossiate with Template context to generate
+   * Process the Groovy template associate with Template context to generate
    * It will be use for digest mail
    * @param ctx
    * @return
@@ -73,28 +73,88 @@ public class TemplateUtils {
     String content = visitor.with(ctx).visit(groovyElement).out();
     return content;
   }
-  
+
   /**
    * Generate the Groovy Template
-   * @param context
-   * @param template
+   * 
+   * @param context The template context
+   * @param element The GroovyElemt
+   * @param out The Writer to writer template
    * @return
    */
   public static void loadGroovy(TemplateContext context, Element element, Writer out) {
-    
     try {
-      String groovyTemplate = element.getTemplate();
-      if (groovyTemplate == null) {
-        groovyTemplate = loadGroovyTemplate(element.getTemplateConfig().getTemplatePath());
-        element.template(groovyTemplate);
+      String groovyTemplate = null;
+      String currentId = ((GroovyElement) element).getCurrentChildId();
+      if (currentId != null) {
+        //
+        groovyTemplate = getGroovyTemplateChild(context, currentId);
+      } else {
+        //
+        groovyTemplate = element.getTemplate();
+        if (groovyTemplate == null) {
+          groovyTemplate = loadGroovyTemplate(element.getTemplateConfig().getTemplatePath());
+          element.template(groovyTemplate);
+        }
       }
-      GroovyTemplate gTemplate = new GroovyTemplate(groovyTemplate);
       //
-      gTemplate.render(out, context);
+      if (groovyTemplate != null && groovyTemplate.length() > 0) {
+        GroovyTemplate gTemplate = new GroovyTemplate(groovyTemplate);
+        gTemplate.render(out, context);
+      }
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException("The function only load groovy with GroovyElement type.");
     } catch (Exception e) {
+      LOG.warn("Failed to load groovy template of plugin " + context.getPluginId() + "\n" + e.getMessage());
     }
   }
   
+  /**
+   * Get the Groovy template child by child's id.
+   * 
+   * @param ctx
+   * @param childId the child's id.
+   * @return
+   */
+  public static String getGroovyTemplateChild(TemplateContext ctx, String childId) {
+    try {
+      ElementCacheKey cacheKey = new ElementCacheKey(ctx.getPluginId(), ctx.getLanguage());
+      Element parentElement = CommonsUtils.getService(TemplateCaching.class).getTemplateElement(cacheKey);
+      //
+      cacheKey = new ElementCacheKey(ctx.getPluginId(), childId, ctx.getLanguage());
+      Element childElement = CommonsUtils.getService(TemplateCaching.class).getTemplateElement(cacheKey);
+      //
+      String groovyTemplate = ((GroovyElement) childElement).getTemplate();
+      if (groovyTemplate == null) {
+        groovyTemplate = loadGroovyTemplate(parentElement.getTemplateConfig().getTemplatePathChild(childId));
+        childElement.template(groovyTemplate);
+      }
+      return groovyTemplate;
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException("The function only get template child is GroovyElement type.");
+    } catch (Exception e) {
+      LOG.warn(String.format("Failed to get template child by id %s of plugin %s \n %s", childId, ctx.getPluginId(), e.getMessage()));
+      return "";
+    }
+  }
+
+  /**
+   * Process the Groovy template child associate with Template context to generate
+   *
+   * @param ctx The template context
+   * @param childId The child's id.
+   * @return the string
+   */
+  public static String processGroovy(TemplateContext ctx, String childId) {
+    ElementCacheKey cacheKey = new ElementCacheKey(ctx.getPluginId(), ctx.getLanguage());
+    Element groovyElement = CommonsUtils.getService(TemplateCaching.class).getTemplateElement(cacheKey);
+    ElementVisitor visitor = new GroovyElementVisitor();
+    ((GroovyElement) groovyElement).setCurrentVisitor((GroovyElementVisitor) visitor.with(ctx));
+    ((GroovyElement) groovyElement).renderChild(childId);
+
+    return visitor.out();
+  }
+
   /**
    * Gets InputStream for groovy template
    * 
@@ -151,17 +211,21 @@ public class TemplateUtils {
   }
 
   /**
-   * Load the groovy template element.
+   * Load the Groovy template element.
    * 
-   * @param key
-   * @param language
-   * @return the groovy element
+   * @param pluginId The plugin's id
+   * @param childId The template child's id
+   * @param language The language's id.
+   * @return The Groovy element
    */
-  public static Element loadGroovyElement(String pluginId, String language) {
+  public static Element loadGroovyElement(String pluginId, String childId, String language) {
+    if (childId != null) {
+      return new GroovyElement().language(language);
+    }
     TemplateConfig templateConfig = getTemplateConfig(pluginId);
     return new GroovyElement().language(language).config(templateConfig);
   }
-  
+
   /**
    * Render for Subject template
    * @param ctx

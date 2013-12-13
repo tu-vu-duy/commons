@@ -28,6 +28,9 @@ import org.apache.commons.lang.StringUtils;
  * Aug 8, 2013  
  */
 public class GroovyElement extends SimpleElement {
+  
+  private GroovyElementVisitor currentVisitor;
+  private String currentChildId;
 
   public String appRes(String key) {
     Locale locale = Locale.ENGLISH;
@@ -47,4 +50,22 @@ public class GroovyElement extends SimpleElement {
     }
     return value;
   }
+
+  public String getCurrentChildId() {
+    return currentChildId;
+  }
+
+  public void setCurrentVisitor(GroovyElementVisitor currentVisitor) {
+    if (this.currentVisitor == null) {
+      this.currentVisitor = currentVisitor;
+    }
+  }
+
+  public void renderChild(String childId) {
+    this.currentChildId = childId;
+    if (currentVisitor != null) {
+      currentVisitor.visit(this);
+    }
+  }
+  
 }
