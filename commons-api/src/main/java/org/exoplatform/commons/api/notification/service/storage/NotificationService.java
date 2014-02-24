@@ -17,8 +17,12 @@
 package org.exoplatform.commons.api.notification.service.storage;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
+import org.exoplatform.commons.api.notification.model.NotificationKey;
+import org.exoplatform.commons.api.notification.model.UserSetting;
 
 
 public interface NotificationService {
@@ -43,4 +47,27 @@ public interface NotificationService {
    */
   void process(Collection<NotificationInfo> notifications) throws Exception;
   
+  
+  /**
+   * Saves information of a notification.
+   * 
+   * @param notification The notification to be saved.
+   * @throws Exception
+   */
+  void save(NotificationInfo notification) throws Exception;
+  
+  /**
+   * Gets information of all notifications of a user.
+   * 
+   * @param userSetting The notification settings of the user.
+   * @return Information of notifications.
+   */
+  Map<NotificationKey, List<NotificationInfo>> getByUser(UserSetting userSetting);
+
+  /**
+   * Removes all messages after they have been sent.
+   * 
+   * @throws Exception
+   */
+  void removeMessageAfterSent() throws Exception;
 }
