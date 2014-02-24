@@ -122,7 +122,8 @@ public class QueueMessageImpl extends AbstractService implements QueueMessage, S
         schedulerService.addPeriodJob(info, periodInfo, jdatamap);
         LOG.info("Make job send notification interval: " + interval);
       } catch (Exception e) {
-        LOG.warn("Failed to add send email notification jobs ", e);
+        LOG.warn("Failed to add send email notification jobs ");
+        LOG.debug(e.getMessage(), e);
       }
     }
   }
@@ -165,10 +166,9 @@ public class QueueMessageImpl extends AbstractService implements QueueMessage, S
   @Override
   public void send() {
     final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
-    SessionProvider sProvider = SessionProvider.createSystemProvider();
     try {
       //
-      load(sProvider);
+      load();
       if (idsRemovingLocal.get() == null) {
         idsRemovingLocal.set(new HashSet<String>());
       }
@@ -187,20 +187,16 @@ public class QueueMessageImpl extends AbstractService implements QueueMessage, S
     } catch (Exception e) {
       LOG.warn("Failed to sending MessageInfos: ", e);
     } finally {
-      sProvider.close();
       removeMessageInfo();
     }
   }
 
   /**
-   * Loading the messageInfo as buffer with Limit
-   * and sinceTime
-   * @param sProvider
+   * Loading the messageInfo as buffer with Limit and sinceTime
    */
-  private void load(SessionProvider sProvider) {
-//    final ReentrantLock lock = this.lock;
-//    lock.lock();
+  private void load() {
     try {
+      SessionProvider sProvider = NotificationSessionManager.getOrCreateSessionProvider();
       NodeIterator iterator = getMessageInfoNodes(sProvider);
       while (iterator.hasNext()) {
         Node node = iterator.nextNode();
@@ -219,14 +215,11 @@ public class QueueMessageImpl extends AbstractService implements QueueMessage, S
       }
     } catch (Exception e) {
       LOG.warn("Failed to sendding MessageInfos: ", e);
-    } finally {
-//      lock.unlock();
     }
   }
 
   private void saveMessageInfo(MessageInfo message) {
     final ReentrantLock lock = this.lock;
-//    SessionProvider sProvider = SessionProvider.createSystemProvider();
     SessionProvider sProvider = NotificationSessionManager.createSystemProvider();
     try {
       lock.lock();
@@ -236,7 +229,6 @@ public class QueueMessageImpl extends AbstractService implements QueueMessage, S
       if (messageInfoNode.canAddMixin("mix:referenceable")) {
         messageInfoNode.addMixin("mix:referenceable");
       }
-
       //
       saveData(messageInfoNode, compress(message.toJSON()));
       sessionSave(messageInfoHome);
@@ -244,15 +236,14 @@ public class QueueMessageImpl extends AbstractService implements QueueMessage, S
     } catch (Exception e) {
       LOG.warn("Failed to storage MessageInfo: " + message.toJSON(), e);
     } finally {
-//      sProvider.close();
       lock.unlock();
     }
   }
 
   private void removeMessageInfo() {
-    SessionProvider sProvider = SessionProvider.createSystemProvider();
+    SessionProvider sProvider = NotificationSessionManager.getOrCreateSessionProvider();
     final ReentrantLock lock = this.lock;
-    List<String> ids = new ArrayList<String>(idsRemovingLocal.get()) ;
+    List<String> ids = new ArrayList<String>(idsRemovingLocal.get());
     try {
       lock.lock();
       Session session = getSession(sProvider, configuration.getWorkspace());
@@ -269,7 +260,6 @@ public class QueueMessageImpl extends AbstractService implements QueueMessage, S
       messages.clear();
       idsRemovingLocal.get().removeAll(ids);
       lock.unlock();
-      sProvider.close();
     }
   }
 
@@ -405,15 +395,12 @@ public class QueueMessageImpl extends AbstractService implements QueueMessage, S
           NodeIterator hIter = it.nextNode().getNodes();
           while (hIter.hasNext()) {
             hIter.nextNode().remove();
-            ++j;
-            if (j % 200 == 0) {
-              session.save();
-            }
+            session.save();
             System.out.print(".");
+            ++j;
           }
-          session.save();
         }
-        LOG.trace("Removed " + j + " nodes info on plugin: " + pli);
+        LOG.trace("\nRemoved " + j + " nodes info on plugin: " + pli);
         t += j;
         session.logout();
       }

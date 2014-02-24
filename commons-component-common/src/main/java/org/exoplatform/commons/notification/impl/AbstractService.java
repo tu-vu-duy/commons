@@ -142,9 +142,6 @@ public abstract class AbstractService {
     Node providerNode = getMessageNodeByPluginId(sProvider, workspace, pluginId);
     String dayName = String.valueOf(Calendar.getInstance().get(Calendar.DAY_OF_MONTH));
     Node dayNode = getOrCreateMessageNode(providerNode, DAY + dayName);
-//    String hourName = String.valueOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY));
-//    Node messageParentNode = getOrCreateMessageNode(dayNode, HOUR + hourName);
-//    return messageParentNode;
     return dayNode;
   }
 

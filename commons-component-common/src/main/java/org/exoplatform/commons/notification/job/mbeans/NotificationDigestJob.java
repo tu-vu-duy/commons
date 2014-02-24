@@ -18,34 +18,47 @@ package org.exoplatform.commons.notification.job.mbeans;
 
 import org.exoplatform.commons.api.notification.service.storage.NotificationService;
 import org.exoplatform.commons.notification.NotificationConfiguration;
+import org.exoplatform.commons.notification.job.NotificationJob;
 import org.exoplatform.commons.utils.CommonsUtils;
-import org.exoplatform.groovyscript.GroovyTemplate;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
-import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.PersistJobDataAfterExecution;
 
 @PersistJobDataAfterExecution
-public class NotificationDigestJob implements Job {
-  
-  private final Log LOG = ExoLogger.getLogger(NotificationDigestJob.class);
-  
+public class NotificationDigestJob extends NotificationJob {
+  private final Log LOG        = ExoLogger.getLogger(NotificationDigestJob.class);
+  private String    digestType = "";
+
   public NotificationDigestJob() {
-    try {
-      new GroovyTemplate("");
-    } catch (Exception e) {}
   }
 
   @Override
   public void execute(JobExecutionContext context) throws JobExecutionException {
+    long startTime = System.currentTimeMillis();
+    //
+    JobDataMap data = context.getJobDetail().getJobDataMap();
+    digestType = data.getString(AbstractNotificationJobManager.DIGEST_TYPE);
+    //
+    super.execute(context);
+
+    long endTime = System.currentTimeMillis();
+    // last execution duration
+    data.put(AbstractNotificationJobManager.LAST_EXECUTION_DURATION, (endTime - startTime) / 1000);
+    // counter
+    String countKey = AbstractNotificationJobManager.EXECUTION_COUNT;
+    if (data.containsKey(countKey)) {
+      data.put(countKey, data.getInt(countKey) + 1);
+    } else {
+      data.put(countKey, 1);
+    }
+  }
+
+  @Override
+  protected void processSendNotification() throws Exception {
     try {
-      long startTime = System.currentTimeMillis();
-      //
-      JobDataMap data = context.getJobDetail().getJobDataMap();
-      String digestType = data.getString(AbstractNotificationJobManager.DIGEST_TYPE);
       if ("daily".equals(digestType)) {
         LOG.info("Starting run DailyJob to send daily email notification ... ");
         CommonsUtils.getService(NotificationConfiguration.class).setSendWeekly(false);
@@ -55,19 +68,10 @@ public class NotificationDigestJob implements Job {
         CommonsUtils.getService(NotificationConfiguration.class).setSendWeekly(true);
         CommonsUtils.getService(NotificationService.class).processDigest();
       }
-      long endTime = System.currentTimeMillis();
-      //last execution duration
-      data.put(AbstractNotificationJobManager.LAST_EXECUTION_DURATION, (endTime - startTime)/1000);
-      //counter
-      String countKey = AbstractNotificationJobManager.EXECUTION_COUNT;
-      if (data.containsKey(countKey)) {
-        data.put(countKey, data.getInt(countKey)+1);
-      } else {
-        data.put(countKey, 1);
-      }
     } catch (Exception e) {
-      LOG.error("DailyJob exception: ", e);
+      LOG.warn(String.format("Failed to send %s digest emails.", digestType));
+      LOG.debug(e);
     }
   }
-  
+
 }

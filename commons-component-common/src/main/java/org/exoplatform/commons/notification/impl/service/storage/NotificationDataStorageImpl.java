@@ -17,7 +17,7 @@
 package org.exoplatform.commons.notification.impl.service.storage;
 
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,7 +46,7 @@ import org.exoplatform.services.jcr.ext.common.SessionProvider;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
-public class NotificationDataStorageImpl extends AbstractService implements NotificationDataStorage{
+public class NotificationDataStorageImpl extends AbstractService implements NotificationDataStorage {
   private static final Log         LOG              = ExoLogger.getLogger(NotificationDataStorageImpl.class);
 
   public static final String       REMOVE_ALL       = "removeAll";
@@ -58,12 +58,30 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
   private final ReentrantLock lock = new ReentrantLock();
 
   private Map<String, Set<String>>  removeByCallBack = new ConcurrentHashMap<String, Set<String>>();
+  
+  private ThreadLocal<Map<String, Node>> parentNodeMap = new ThreadLocal<Map<String,Node>>();
 
   public NotificationDataStorageImpl(NotificationConfiguration configuration) {
     this.workspace = configuration.getWorkspace();
     this.configuration = configuration;
   }
+  
+  public void resetParentNodeMap() {
+    if (this.parentNodeMap.get() == null) {
+      this.parentNodeMap.set(new HashMap<String, Node>());
+    } else {
+      this.parentNodeMap.get().clear();
+    }
+  }
 
+  private Node getParentNodeByThreadLocal(String pluginId) {
+    if (parentNodeMap.get() == null) {
+      resetParentNodeMap();
+      return null;
+    }
+    return parentNodeMap.get().get(pluginId);
+  }
+  
   @Override
   public void save(NotificationInfo message) throws Exception {
     SessionProvider sProvider = CommonsUtils.getSystemSessionProvider();
@@ -94,7 +112,6 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
 
   @Override
   public Map<NotificationKey, List<NotificationInfo>> getByUser(UserSetting setting) {
-//    SessionProvider sProvider = SessionProvider.createSystemProvider();
     SessionProvider sProvider = NotificationSessionManager.createSystemProvider();
     Map<NotificationKey, List<NotificationInfo>> notificationData = new LinkedHashMap<NotificationKey, List<NotificationInfo>>();
     try {
@@ -102,19 +119,17 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
       if (configuration.isSendWeekly() == false) {
         // for daily
         for (String pluginId : setting.getDailyProviders()) {
-          putMap(notificationData, NotificationKey.key(pluginId), getNotificationMessages(sProvider, pluginId, NTF_SEND_TO_DAILY, setting.getUserId()));
+          putMap(notificationData, NotificationKey.key(pluginId), getDailyNotification(sProvider, pluginId, setting.getUserId()));
         }
       } else {
         // for weekly
         for (String pluginId : setting.getWeeklyProviders()) {
-          putMap(notificationData, NotificationKey.key(pluginId), getNotificationMessages(sProvider, pluginId, NTF_SEND_TO_WEEKLY, setting.getUserId()));
+          putMap(notificationData, NotificationKey.key(pluginId), getWeeklyNotification(sProvider, pluginId, setting.getUserId()));
         }
       }
 
     } catch (Exception e) {
       LOG.error("Failed to get the NotificationMessage by user: " + setting.getUserId(), e);
-    } finally {
-//      sProvider.close();
     }
 
     return notificationData;
@@ -137,46 +152,85 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
     }
   }
 
-  private Node getParentNodeByPlugin(SessionProvider sProvider, String property, String pluginId) throws Exception {
-    if (NTF_SEND_TO_DAILY.equals(property)) {
-      return getOrCreateMessageParent(sProvider, workspace, pluginId).getParent();
+  private Node getDaily(SessionProvider sProvider, String pluginId) throws Exception {
+    Node node = getParentNodeByThreadLocal(pluginId);
+    if (node == null || node.getSession() == null || !node.getSession().isLive()) {
+      // In the case session what hold by Node has been NULL or isLive is FALSE
+      // must re-load Node from JCR
+      node = getOrCreateMessageParent(sProvider, workspace, pluginId);
+      parentNodeMap.get().put(pluginId, node);
     }
-    return getMessageNodeByPluginId(sProvider, workspace, pluginId);
+
+    return node;
   }
 
-  private List<NotificationInfo> getNotificationMessages(SessionProvider sProvider, String pluginId,
-                                                            String property, String userId) throws Exception {
+  private Node getWeekly(SessionProvider sProvider, String pluginId) throws Exception {
+    Node node = getParentNodeByThreadLocal(pluginId);
+    // In the case session what hold by Node has been NULL or isLive is FALSE
+    // must re-load Node from JCR
+    if (node == null || node.getSession() == null || !node.getSession().isLive()) {
+      node = getMessageNodeByPluginId(sProvider, workspace, pluginId);
+      parentNodeMap.get().put(pluginId, node);
+    }
+
+    return node;
+  }
+
+  private List<NotificationInfo> getNotificationMessages(Node messageHomeNode, String pluginId,
+                                                            boolean isDaily, String userId) throws Exception {
     List<NotificationInfo> messages = new ArrayList<NotificationInfo>();
-    Node messageHomeNode = getParentNodeByPlugin(sProvider, property, pluginId);
-    NodeIterator iter = getNotificationNodeMessages(messageHomeNode, property, userId);
+    NodeIterator iter = getNotifications(messageHomeNode, isDaily, userId);
     Session session = messageHomeNode.getSession();
     while (iter.hasNext()) {
       Node node = iter.nextNode();
       NotificationInfo model = fillModel(node);
       messages.add(model.setTo(userId));
-      processRemove(session, model, property, node.getPath());
+      processRemove(session, model, isDaily, node.getPath());
     }
     return messages;
   }
+  
+  
+  private List<NotificationInfo> getDailyNotification(SessionProvider sProvider, String pluginId,
+                                                          String userId) throws Exception {
+    
+    return getNotificationMessages(getDaily(sProvider, pluginId), pluginId, true, userId);
+  }
 
-  private NodeIterator getNotificationNodeMessages(Node messageHomeNode, String property, String userId) throws Exception {
+  private List<NotificationInfo> getWeeklyNotification(SessionProvider sProvider, String pluginId,
+                                                          String userId) throws Exception {
+    
+    return getNotificationMessages(getWeekly(sProvider, pluginId), pluginId, false, userId);
+  }
+
+  private NodeIterator getNotifications(Node messageHomeNode, boolean isDaily, String userId) throws Exception {
     final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
     long startTime = 0;
     if ( stats ) startTime = System.currentTimeMillis();
     
+    String parentPath = messageHomeNode.getPath();
     StringBuilder strQuery = new StringBuilder("SELECT * FROM ").append(NTF_MESSAGE).append(" WHERE ");
     
-    if (NTF_SEND_TO_DAILY.equals(property)) {
-      String dayName = String.valueOf(Calendar.getInstance().get(Calendar.DAY_OF_MONTH));
-      strQuery.append(" (jcr:path LIKE '").append(messageHomeNode.getPath()).append("/").append(DAY).append(dayName).append("/%'")
-              .append(" AND NOT jcr:path LIKE '").append(messageHomeNode.getPath()).append("/").append(DAY).append(dayName).append("/%/%')");
+    //ntf:sendToWeekly: ['&forAllUser'] OR ['demo', 'mary', 'john'] 
+    //ntf:sendToDaily: ['&forAllUser'] OR ['demo', 'mary', 'john'] 
+    //builds filter UserId to send daily or weekly
+    //for example: in case daily >> ntf:sendToDaily='demo'
+    //             in case weekly >> ntf:sendToWeekly='demo'
+    if (isDaily) {
+      strQuery.append(" (jcr:path LIKE '").append(parentPath).append("/%'")
+              .append(" AND NOT jcr:path LIKE '").append(parentPath).append("/%/%')");
+      strQuery.append(" AND (").append(NTF_SEND_TO_DAILY).append("='").append(userId).append("'");
     } else {
-      strQuery.append(" jcr:path LIKE '").append(messageHomeNode.getPath()).append("/%'");
+      strQuery.append(" jcr:path LIKE '").append(parentPath).append("/%'");
+      strQuery.append(" AND (").append(NTF_SEND_TO_WEEKLY).append("='").append(userId).append("'");
     }
 
-    strQuery.append(" AND (").append(property).append("='").append(userId).append("'");
-    if(NotificationInfo.FOR_ALL_USER.equals(userId) == false) {
-      strQuery.append(" OR ").append(property).append("='").append(NotificationInfo.FOR_ALL_USER).append("') AND ")
+    if(!NotificationInfo.FOR_ALL_USER.equals(userId)) {
+      strQuery.append(" OR ")
+              .append((isDaily) ? NTF_SEND_TO_DAILY : NTF_SEND_TO_WEEKLY)
+              .append("='")
+              .append(NotificationInfo.FOR_ALL_USER)
+              .append("') AND ")
               .append(NTF_FROM).append("<>'").append(userId).append("'");
       strQuery.append(" order by ").append(NTF_ORDER).append(ASCENDING).append(", exo:dateCreated").append(DESCENDING);
     } else {
@@ -194,6 +248,36 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
     return it;
   }
 
+  private NodeIterator getNotificationsForWeeklySendAllUser(Node messageHomeNode) throws Exception {
+    
+    String parentPath = messageHomeNode.getPath();
+    StringBuilder strQuery = new StringBuilder("SELECT * FROM ").append(NTF_MESSAGE).append(" WHERE ");
+
+    strQuery.append(" (jcr:path LIKE '").append(parentPath).append("/%'")
+            .append(" AND (").append(NTF_SEND_TO_DAILY).append("='' OR ").append(NTF_SEND_TO_WEEKLY).append("='").append(NotificationInfo.FOR_ALL_USER).append("')");
+    
+    QueryManager qm = messageHomeNode.getSession().getWorkspace().getQueryManager();
+    Query query = qm.createQuery(strQuery.toString(), Query.SQL);
+    NodeIterator it = query.execute().getNodes();
+
+    return it;
+  }
+
+  private NodeIterator getNotificationsForDailySendAllUser(Node messageHomeNode) throws Exception {
+    
+    String parentPath = messageHomeNode.getPath();
+    StringBuilder strQuery = new StringBuilder("SELECT * FROM ").append(NTF_MESSAGE).append(" WHERE ");
+    
+    strQuery.append(" (jcr:path LIKE '").append(parentPath).append("/%'")
+            .append(" AND (").append(NTF_SEND_TO_DAILY).append("='").append(NotificationInfo.FOR_ALL_USER).append("')");
+    
+    QueryManager qm = messageHomeNode.getSession().getWorkspace().getQueryManager();
+    Query query = qm.createQuery(strQuery.toString(), Query.SQL);
+    NodeIterator it = query.execute().getNodes();
+    
+    return it;
+  }
+
   private NotificationInfo fillModel(Node node) throws Exception {
     if(node == null) return null;
     NotificationInfo message = NotificationInfo.instance()
@@ -208,8 +292,8 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
     return message;
   }
 
-  private Set<String> addValue(String property, String value) {
-    Set<String> set = removeByCallBack.get(property);
+  private Set<String> addValue(String key, String value) {
+    Set<String> set = removeByCallBack.get(key);
     if (set == null) {
       set = new HashSet<String>();
     }
@@ -218,29 +302,24 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
   }
 
   private void processRemove(Session session, NotificationInfo message, 
-                                String property, String path) throws Exception {
+                                boolean isDaily, String path) throws Exception {
     boolean isRemove = false;
-    if (message.isSendAll()) {
-      isRemove = (property.equals(NTF_SEND_TO_WEEKLY));
-      if(isRemove == false) {
-        removeByCallBack.put(property, addValue(property, path));
-      }
-    }
-    if (isRemove == false && property.equals(NTF_SEND_TO_DAILY) && message.getSendToDaily().length == 1) {
+    if (isDaily && message.getSendToDaily().length == 1) {
       isRemove = (message.getSendToWeekly().length == 0);
     }
-    if (isRemove == false && property.equals(NTF_SEND_TO_WEEKLY) && message.getSendToWeekly().length == 1) {
+    if (isRemove == false && !isDaily && message.getSendToWeekly().length == 1) {
       isRemove = (message.getSendToDaily().length == 0);
     }
     //
     if (isRemove) {
       removeByCallBack.put(REMOVE_ALL, addValue(REMOVE_ALL, path));
     } else {
-      removeProperty(session, path, property, message.getTo());
+      String removeRemoteId = message.getTo();
+      removeUserInSendList(session, path, (isDaily) ? NTF_SEND_TO_DAILY : NTF_SEND_TO_WEEKLY, removeRemoteId);
     }
   }
 
-  private void removeProperty(Session session, String path, String property, String value) {
+  private void removeUserInSendList(Session session, String path, String property, String value) {
     final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
     
     try {
@@ -260,7 +339,8 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
         }
       }
     } catch (Exception e) {
-      LOG.warn(String.format("Failed to remove property %s of value %s on node ", property, value));
+      LOG.warn(String.format("Failed to remove value %s on property %s of node", value, property));
+      LOG.debug(e.getMessage(), e);
     }
   }
 
@@ -268,7 +348,6 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
   public void removeMessageAfterSent() throws Exception {
     final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
     
-//    SessionProvider sProvider = SessionProvider.createSystemProvider();
     SessionProvider sProvider = NotificationSessionManager.createSystemProvider();
     try {
       Node notificationHome = getNotificationHomeNode(sProvider, workspace);
@@ -293,36 +372,46 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
         }
         session.save();
       }
-      // remove property daily for case send all.
-      listPaths = removeByCallBack.get(NTF_SEND_TO_DAILY);
-      removeByCallBack.remove(NTF_SEND_TO_DAILY);
-      if (listPaths != null && listPaths.size() > 0) {
-        for (String nodePath : listPaths) {
-          removeProperty(session, nodePath, NTF_SEND_TO_DAILY, NotificationInfo.FOR_ALL_USER);
-        }
-      }
+      
       // remove node weekly for case send all.
+      Node messageHomeNode = notificationHome.getNode(MESSAGE_HOME_NODE);
       if (configuration.isSendWeekly()) {
-        Node messageHomeNode = notificationHome.getNode(MESSAGE_HOME_NODE);
-        NodeIterator iterator = getNotificationNodeMessages(messageHomeNode, NTF_SEND_TO_WEEKLY, NotificationInfo.FOR_ALL_USER);
+        NodeIterator iterator = getNotificationsForWeeklySendAllUser(messageHomeNode);
         String nodePath;
         while (iterator.hasNext()) {
           Node node = iterator.nextNode();
           nodePath = node.getPath();
           node.remove();
-          
-          //record entity delete here
+
+          // record entity delete here
           if (stats) {
             NotificationContextFactory.getInstance().getStatisticsCollector().deleteEntity(NTF_MESSAGE);
           }
           LOG.debug("Remove NotificationMessage " + nodePath);
         }
-        session.save();
+      } else {
+        // remove send all for daily.
+        NodeIterator iterator = getNotificationsForDailySendAllUser(messageHomeNode);
+        String nodePath;
+        while (iterator.hasNext()) {
+          Node node = iterator.nextNode();
+          nodePath = node.getPath();
+
+          if (node.getProperty(NTF_SEND_TO_WEEKLY).getString().length() > 0) {
+            removeUserInSendList(session, nodePath, NTF_SEND_TO_DAILY, NotificationInfo.FOR_ALL_USER);
+          } else {
+            node.remove();
+            // record entity delete here
+            if (stats) {
+              NotificationContextFactory.getInstance().getStatisticsCollector().deleteEntity(NTF_MESSAGE);
+            }
+          }
+        }
       }
+      session.save();
     } catch (Exception e) {
-      LOG.warn("Failed to remove message after sent email notification", e);
-    } finally {
-//      sProvider.close();
+      LOG.warn("Failed to remove message after sent email notification");
+      LOG.debug(e.getMessage(), e);
     }
   }
 

@@ -41,7 +41,6 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     NodeIterator iterator = homeNode.getNodes();
     while (iterator.hasNext()) {
       Node node = (iterator.nextNode());
-      System.out.println("\n remove " + node.getPath());
       node.remove();
     }
     session.save();

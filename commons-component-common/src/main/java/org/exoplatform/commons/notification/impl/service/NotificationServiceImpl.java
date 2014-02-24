@@ -38,6 +38,7 @@ import org.exoplatform.commons.notification.NotificationContextFactory;
 import org.exoplatform.commons.notification.NotificationUtils;
 import org.exoplatform.commons.notification.impl.AbstractService;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
+import org.exoplatform.commons.notification.impl.service.storage.NotificationDataStorageImpl;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
@@ -158,6 +159,8 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     
     PluginSettingService settingService = CommonsUtils.getService(PluginSettingService.class);
     UserSetting defaultSetting = getDefaultUserSetting(settingService.getActivePluginIds());
+    //
+    ((NotificationDataStorageImpl) storage).resetParentNodeMap();
     //process for users used setting
     /**
      * Tested with 5000 users:
@@ -189,6 +192,8 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
       send(digest, mailService, usersDefaultSettings, defaultSetting);
       offset += limit;
     }
+    //
+    ((NotificationDataStorageImpl) storage).resetParentNodeMap();
     LOG.debug("Time to run process users used default settings: " + (System.currentTimeMillis() - startTime) + "ms.");
   }
   
