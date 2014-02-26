@@ -55,8 +55,6 @@ public class GroovyElementVisitor implements ElementVisitor {
     } catch (Exception e) {
       e.printStackTrace();
     }
-    // TemplateUtils.loadGroovy(this.getTemplateContext(), element,
-    // getWriter());
     return this;
   }
 

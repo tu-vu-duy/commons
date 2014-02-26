@@ -21,13 +21,13 @@ import java.io.Writer;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import org.exoplatform.commons.api.notification.NotificationContext;
 import org.exoplatform.commons.api.notification.model.MessageInfo;
-import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.model.UserSetting;
+import org.exoplatform.commons.api.notification.node.NTFInforkey;
+import org.exoplatform.commons.api.notification.node.TreeNode;
 import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugin;
 import org.exoplatform.commons.api.notification.plugin.NotificationPluginUtils;
 import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
@@ -54,12 +54,8 @@ public class DigestorServiceImpl implements DigestorService {
   }
   
   
-  public MessageInfo buildMessage(Map<NotificationKey, List<NotificationInfo>> notificationData, UserSetting userSetting) {
+  public MessageInfo buildMessage(TreeNode treeNode, UserSetting userSetting) {
     MessageInfo messageInfo = null;
-
-    if (notificationData == null || notificationData.size() == 0) {
-      return messageInfo;
-    }
 
     long startTime = System.currentTimeMillis();
     try {
@@ -68,17 +64,11 @@ public class DigestorServiceImpl implements DigestorService {
       NotificationPluginContainer containerService = CommonsUtils.getService(NotificationPluginContainer.class);
       NotificationConfiguration configuration = CommonsUtils.getService(NotificationConfiguration.class);
       
-      List<String> activeProviders = pluginService.getActivePluginIds();
+      List<String> activePlugins = pluginService.getActivePluginIds();
       NotificationContext nCtx = NotificationContextImpl.cloneInstance();
+      nCtx.append(NotificationPluginUtils.SENDTO, userSetting.getUserId());
       
-      int totalDigestMsg = 0;
-      for (String providerId : activeProviders) {
-        List<NotificationInfo> messages = notificationData.get(NotificationKey.key(providerId));
-        if (messages == null || messages.size() == 0){
-          continue;
-        }
-        totalDigestMsg += messages.size();
-      }
+      int totalDigestMsg = treeNode.getSize();
       
       Writer writer = new StringWriter();
       if (totalDigestMsg < 1) {
@@ -88,13 +78,14 @@ public class DigestorServiceImpl implements DigestorService {
       } else {
         writer.append("<ul style=\"margin: 0 0  40px; padding-left: 0; color: #2F5E92; list-style-position: outside;  list-style: disc; \">");
       }
-      for (String providerId : activeProviders) {
-        List<NotificationInfo> messages = notificationData.get(NotificationKey.key(providerId));
+      for (String pluginId : activePlugins) {
+        
+        List<NTFInforkey> messages = treeNode.getNFTInforkeys(NotificationKey.key(pluginId));
         if (messages == null || messages.size() == 0){
           continue;
         }
         
-        AbstractNotificationPlugin plugin = containerService.getPlugin(NotificationKey.key(providerId));
+        AbstractNotificationPlugin plugin = containerService.getPlugin(NotificationKey.key(pluginId));
         nCtx.setNotificationInfos(messages);
         plugin.buildDigest(nCtx, writer);
       }
@@ -128,7 +119,7 @@ public class DigestorServiceImpl implements DigestorService {
       return null;
     }
     
-    LOG.info("End build template of DigestorProviderImpl ... " + (System.currentTimeMillis() - startTime) + " ms");
+    LOG.info(String.format("End build template email for user %s of DigestorProviderImpl ... " + (System.currentTimeMillis() - startTime) + " ms", userSetting.getUserId()));
     
     final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
     if (stats) {

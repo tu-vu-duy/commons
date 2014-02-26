@@ -135,15 +135,6 @@ public abstract class AbstractNotificationPlugin extends BaseComponentPlugin {
     return NotificationKey.key(this);
   }
   
-  /**
-   * 
-   * @param message
-   * @return
-   */
-  protected String getLanguage(NotificationInfo message) {
-    return NotificationPluginUtils.getLanguage(message.getTo());
-  }
-  
   protected OrganizationService getOrganizationService() {
     return NotificationPluginUtils.getOrganizationService();
   }

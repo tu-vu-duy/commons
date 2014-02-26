@@ -22,17 +22,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.jcr.Value;
-
 import org.apache.commons.lang.ArrayUtils;
 import org.exoplatform.services.jcr.util.IdGenerator;
 
 public class NotificationInfo {
-  public static final String  PREFIX_ID     = "NotificationMessage";
-
   public static final String  FOR_ALL_USER  = "&forAllUser";
 
   private String              id;
+
+  private String              name;
 
   private NotificationKey     key;                                  //
 
@@ -52,7 +50,7 @@ public class NotificationInfo {
   private String[]            sendToWeekly;
 
   public NotificationInfo() {
-    this.id = PREFIX_ID + IdGenerator.generate();
+    this.name = IdGenerator.generate();
     this.sendToDaily = new String[] { "" };
     this.sendToWeekly = new String[] { "" };
   }
@@ -67,6 +65,15 @@ public class NotificationInfo {
 
   public NotificationInfo setId(String id) {
     this.id = id;
+    return this;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public NotificationInfo setName(String nodeName) {
+    this.name = nodeName;
     return this;
   }
 
@@ -203,12 +210,11 @@ public class NotificationInfo {
   /**
    * @param arrays the value to set ownerParameter
    */
-  public NotificationInfo setOwnerParameter(Value[] values) {
+  public NotificationInfo setOwnerParameter(String[] values) {
     if (values == null || values.length == 0) return this;
 
-    for (Value val : values) {
+    for (String str : values) {
       try {
-        String str = val.getString();
         if (str.indexOf("=") > 0) {
           String key = str.substring(0, str.indexOf("=")).trim();
           String value = str.substring(str.indexOf("=") + 1).trim();
@@ -293,7 +299,10 @@ public class NotificationInfo {
       if (super.equals(o)) {
         return true;
       }
-      if (m.getId().equals(this.id)) {
+      if (m.getName().equals(this.name)) {
+        return true;
+      }
+      if (m.getId() != null && m.getId().equals(this.id)) {
         return true;
       }
 
@@ -352,6 +361,7 @@ public class NotificationInfo {
     message.setFrom(from)
            .key(key)
            .setId(id)
+           .setName(name)
            .setOrder(order)
            .setOwnerParameter(ownerParameter)
            .setSendToDaily(sendToDaily)

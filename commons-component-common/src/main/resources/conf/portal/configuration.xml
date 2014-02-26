@@ -133,17 +133,17 @@
           </object>
         </object-param>
         <object-param>
-          <name>cache.config.TemplateGenerator</name>
-          <description>The JBoss Cache configuration for the template generator</description>
+          <name>cache.config.NotificationDataStorage</name>
+          <description>The JBoss Cache configuration for the notification information</description>
           <object type="org.exoplatform.services.cache.ExoCacheConfig">
             <field name="name">
-              <string>TemplateGenerator</string>
+              <string>commons.notification.NotificationDataStorage</string>
             </field>
             <field name="maxSize">
-              <int>${cache.exo.commons.TemplateGenerator.Capacity:2000}</int>
+              <int>${cache.exo.commons.NotificationDataStorage.Capacity:20000}</int>
             </field>
             <field name="liveTime">
-              <long>${cache.exo.commons.TemplateGenerator.TimeToLive:600000}</long>
+              <long>${cache.exo.commons.NotificationDataStorage.TimeToLive:600000}</long>
             </field>
             <field name="implementation">
               <string>org.exoplatform.services.cache.concurrent.ConcurrentFIFOExoCache</string>
@@ -177,17 +177,17 @@
           </object>
         </object-param>
         <object-param>
-          <name>cache.config.TemplateGenerator</name>
-          <description>The JBoss Cache configuration for the navigation service</description>
+          <name>cache.config.NotificationDataStorage</name>
+          <description>The JBoss Cache configuration for the notification information</description>
           <object type="org.exoplatform.services.cache.impl.jboss.ea.EAExoCacheConfig">
             <field name="name">
-              <string>TemplateGenerator</string>
+              <string>commons.notification.NotificationDataStorage</string>
             </field>
             <field name="expirationTimeout">
-              <long>${cache.exo.commons.TemplateGenerator.ExpirationTimeout:600000}</long>
+              <long>${cache.exo.commons.NotificationDataStorage.ExpirationTimeout:600000}</long>
             </field>
             <field name="maxNodes">
-              <int>${cache.exo.commons.TemplateGenerator.MaxNodes:5000}</int>
+              <int>${cache.exo.commons.NotificationDataStorage.MaxNodes:5000}</int>
             </field>
             <field name="distributed">
               <boolean>true</boolean>

@@ -19,37 +19,54 @@ package org.exoplatform.commons.notification.impl.service;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import org.exoplatform.commons.api.notification.NotificationContext;
 import org.exoplatform.commons.api.notification.model.MessageInfo;
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
-import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.model.UserSetting;
 import org.exoplatform.commons.api.notification.model.UserSetting.FREQUENCY;
+import org.exoplatform.commons.api.notification.node.NTFInforkey;
+import org.exoplatform.commons.api.notification.node.TreeNode;
 import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugin;
+import org.exoplatform.commons.api.notification.plugin.NotificationPluginUtils;
+import org.exoplatform.commons.api.notification.service.NotificationService;
 import org.exoplatform.commons.api.notification.service.QueueMessage;
+import org.exoplatform.commons.api.notification.service.listener.NTFEvent;
+import org.exoplatform.commons.api.notification.service.listener.NTFListener;
 import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
 import org.exoplatform.commons.api.notification.service.setting.UserSettingService;
 import org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage;
-import org.exoplatform.commons.api.notification.service.storage.NotificationService;
 import org.exoplatform.commons.api.notification.service.template.DigestorService;
+import org.exoplatform.commons.notification.NotificationConfiguration;
 import org.exoplatform.commons.notification.NotificationContextFactory;
 import org.exoplatform.commons.notification.NotificationUtils;
 import org.exoplatform.commons.notification.impl.AbstractService;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
+import org.exoplatform.commons.notification.impl.service.listener.NTFListenerImpl;
 import org.exoplatform.commons.notification.impl.service.storage.NotificationDataStorageImpl;
 import org.exoplatform.commons.utils.CommonsUtils;
+import org.exoplatform.services.listener.Event;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.mail.MailService;
 
 public class NotificationServiceImpl extends AbstractService implements NotificationService {
   private static final Log         LOG              = ExoLogger.getLogger(NotificationServiceImpl.class);
+  private final NotificationConfiguration configuration;
   private final NotificationDataStorage storage;
+  private final PluginSettingService settingService;
+  private final UserSettingService userService;
+  private final MailService mailService;
+  private NTFListener listener;
 
-  public NotificationServiceImpl(NotificationDataStorage storage) {
+  public NotificationServiceImpl(NotificationConfiguration configuration, NotificationDataStorage storage,
+                                  PluginSettingService settingService, UserSettingService userService, MailService mailService) {
+    this.configuration = configuration;
     this.storage = storage;
+    this.settingService = settingService;
+    this.userService = userService;
+    this.mailService = mailService;
+    this.listener = new NTFListenerImpl();
   }
   
   @Override
@@ -108,6 +125,7 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     NotificationContext nCtx = NotificationContextImpl.cloneInstance();
     AbstractNotificationPlugin plugin = nCtx.getPluginContainer().getPlugin(notification.getKey());
     if (plugin != null) {
+      nCtx.append(NotificationPluginUtils.SENDTO, notification.getTo());
       nCtx.setNotificationInfo(notification);
       MessageInfo info = plugin.buildMessage(nCtx);
       
@@ -150,50 +168,46 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
   @Override
   public void processDigest() throws Exception {
     /**
-     * 1. just implements for daily
-     * 2. apply Strategy pattern and Factory Pattern
+     * 1. just implements for daily 2. apply Strategy pattern and Factory
+     * Pattern
      */
-    UserSettingService userService = CommonsUtils.getService(UserSettingService.class);
     DigestorService digest = CommonsUtils.getService(DigestorService.class);
-    MailService mailService = CommonsUtils.getService(MailService.class);
-    
-    PluginSettingService settingService = CommonsUtils.getService(PluginSettingService.class);
-    UserSetting defaultSetting = getDefaultUserSetting(settingService.getActivePluginIds());
     //
-    ((NotificationDataStorageImpl) storage).resetParentNodeMap();
-    //process for users used setting
-    /**
-     * Tested with 5000 users:
-     * 
-     * + limit = 20 time lost: 58881ms user settings 128992ms default user settings.
-     * + limit = 50 time lost: 44873ms user settings 70630ms default user settings.
-     * + limit = 100 time lost: 26997ms user settings 60051ms default user settings.
-    */
+    NotificationDataStorageImpl dataStorage = CommonsUtils.getService(NotificationDataStorageImpl.class);
     long startTime = System.currentTimeMillis();
-    int limit = 100;
-    int offset = 0;
-    while (true) {
-      List<UserSetting> userSettings = userService.getDaily(offset, limit);
-      if(userSettings.size() == 0) {
-        break;
+    try {
+      dataStorage.resetParentNodeMap();
+      // process for users used setting
+      int limit = 100;
+      int offset = 0;
+      while (true) {
+        List<UserSetting> userSettings = userService.getDaily(offset, limit);
+        if (userSettings.size() == 0) {
+          break;
+        }
+        send(digest, mailService, userSettings, null);
+        offset += limit;
       }
-      send(digest, mailService, userSettings, null);
-      offset += limit;
-    }
-    LOG.debug("Time to run process users have settings: " + (System.currentTimeMillis() - startTime) + "ms.");
-    startTime = System.currentTimeMillis();
-    //process for users used default setting
-    offset = 0;
-    while (true) {
-      List<UserSetting> usersDefaultSettings = userService.getDefaultDaily(offset, limit);
-      if(usersDefaultSettings.size() == 0) {
-        break;
+      LOG.debug("Time to run process users have settings: " + (System.currentTimeMillis() - startTime) + "ms.");
+
+      // process for users used default setting
+      UserSetting defaultSetting = getDefaultUserSetting(settingService.getActivePluginIds());
+      startTime = System.currentTimeMillis();
+      offset = 0;
+      while (true) {
+        List<UserSetting> usersDefaultSettings = userService.getDefaultDaily(offset, limit);
+        if (usersDefaultSettings.size() == 0) {
+          break;
+        }
+        send(digest, mailService, usersDefaultSettings, defaultSetting);
+        offset += limit;
       }
-      send(digest, mailService, usersDefaultSettings, defaultSetting);
-      offset += limit;
+    } finally {
+      //
+      dataStorage.resetParentNodeMap();
+      processEvents();
     }
-    //
-    ((NotificationDataStorageImpl) storage).resetParentNodeMap();
+
     LOG.debug("Time to run process users used default settings: " + (System.currentTimeMillis() - startTime) + "ms.");
   }
   
@@ -206,10 +220,10 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
                                     .setUserId(userSetting.getUserId())
                                     .setLastUpdateTime(userSetting.getLastUpdateTime());
       }
-      Map<NotificationKey, List<NotificationInfo>> notificationMessageMap = storage.getByUser(userSetting);
+      TreeNode treeNode = storage.getByUser(userSetting);
 
-      if (notificationMessageMap.size() > 0) {
-        MessageInfo messageInfo = digest.buildMessage(notificationMessageMap, userSetting);
+      if (treeNode.getSize() > 0) {
+        MessageInfo messageInfo = digest.buildMessage(treeNode, userSetting);
         if (messageInfo != null) {
           //
           CommonsUtils.getService(QueueMessage.class).put(messageInfo);
@@ -221,8 +235,6 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
         }
       }
     }
-    //Clear all stored message
-    storage.removeMessageAfterSent();
   }
   
   private UserSetting getDefaultUserSetting(List<String> activesProvider) {
@@ -237,5 +249,15 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     }
 
     return setting;
+  }
+
+  @Override
+  public void addEvent(Event<String, NTFInforkey> event) {
+    this.listener.addEvent(event);
+  }
+
+  @Override
+  public void processEvents() {
+    this.listener.processEvents((configuration.isSendWeekly()) ? NTFEvent.NAME.WEEKLY : NTFEvent.NAME.DAILY);
   }
 }

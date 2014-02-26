@@ -18,6 +18,7 @@ package org.exoplatform.commons.api.notification.plugin;
 
 import java.util.Locale;
 
+import org.exoplatform.commons.api.notification.model.ArgumentLiteral;
 import org.exoplatform.commons.api.settings.SettingService;
 import org.exoplatform.commons.api.settings.SettingValue;
 import org.exoplatform.commons.api.settings.data.Context;
@@ -30,6 +31,8 @@ import org.exoplatform.services.organization.UserHandler;
 import org.exoplatform.services.organization.UserProfile;
 
 public class NotificationPluginUtils {
+  public final static ArgumentLiteral<String> SENDTO = new ArgumentLiteral<String>(String.class, "sendTo");
+
   public static final String DEFAULT_LANGUAGE = Locale.ENGLISH.getLanguage();
 
   private static OrganizationService organizationService;

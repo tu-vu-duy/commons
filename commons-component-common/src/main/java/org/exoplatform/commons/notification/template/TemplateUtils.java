@@ -20,7 +20,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.net.URL;
 import java.text.MessageFormat;
 import java.util.Locale;
@@ -37,12 +36,9 @@ import org.exoplatform.commons.api.notification.service.template.TemplateContext
 import org.exoplatform.commons.api.notification.template.Element;
 import org.exoplatform.commons.api.notification.template.ElementVisitor;
 import org.exoplatform.commons.notification.NotificationUtils;
-import org.exoplatform.commons.notification.cache.ElementCacheKey;
-import org.exoplatform.commons.notification.cache.TemplateCaching;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.configuration.ConfigurationManager;
-import org.exoplatform.groovyscript.GroovyTemplate;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.resources.ResourceBundleService;
@@ -66,33 +62,11 @@ public class TemplateUtils {
    * @return
    */
   public static String processGroovy(TemplateContext ctx) {
-    ElementCacheKey cacheKey = new ElementCacheKey(ctx.getPluginId(), ctx.getLanguage());
-    Element groovyElement = CommonsUtils.getService(TemplateCaching.class).getTemplateElement(cacheKey);
-    
+    Element groovyElement = loadGroovyElement(ctx.getPluginId(), ctx.getLanguage());
+
     ElementVisitor visitor = new GroovyElementVisitor();
     String content = visitor.with(ctx).visit(groovyElement).out();
     return content;
-  }
-  
-  /**
-   * Generate the Groovy Template
-   * @param context
-   * @param template
-   * @return
-   */
-  public static void loadGroovy(TemplateContext context, Element element, Writer out) {
-    
-    try {
-      String groovyTemplate = element.getTemplate();
-      if (groovyTemplate == null) {
-        groovyTemplate = loadGroovyTemplate(element.getTemplateConfig().getTemplatePath());
-        element.template(groovyTemplate);
-      }
-      GroovyTemplate gTemplate = new GroovyTemplate(groovyTemplate);
-      //
-      gTemplate.render(out, context);
-    } catch (Exception e) {
-    }
   }
   
   /**

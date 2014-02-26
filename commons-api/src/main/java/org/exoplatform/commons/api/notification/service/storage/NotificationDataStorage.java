@@ -16,12 +16,9 @@
  */
 package org.exoplatform.commons.api.notification.service.storage;
 
-import java.util.List;
-import java.util.Map;
-
-import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.UserSetting;
+import org.exoplatform.commons.api.notification.node.TreeNode;
 
 
 public interface NotificationDataStorage {
@@ -33,20 +30,23 @@ public interface NotificationDataStorage {
    * @throws Exception
    */
   void save(NotificationInfo notification) throws Exception;
-  
-  /**
-   * Gets information of all notifications of a user.
-   * 
-   * @param userSetting The notification settings of the user.
-   * @return Information of notifications.
-   */
-  Map<NotificationKey, List<NotificationInfo>> getByUser(UserSetting userSetting);
 
   /**
-   * Removes all messages after they have been sent.
+   * get information of a notification.
    * 
+   * @param id The UUID of notification to be get.
    * @throws Exception
    */
-  void removeMessageAfterSent() throws Exception;
+  NotificationInfo get(String id) throws Exception;
+
+  /**
+   * Remove a notification.
+   * 
+   * @param id The UUID of notification to be remove.
+   * @throws Exception
+   */
+  void remove(String id) throws Exception;
   
+  TreeNode getByUser(UserSetting setting);
+
 }

@@ -20,14 +20,17 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import javax.jcr.Value;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
 import org.apache.commons.lang.StringUtils;
+import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.plugin.config.TemplateConfig;
 import org.exoplatform.commons.api.notification.template.Element;
+import org.exoplatform.commons.notification.impl.AbstractService;
 import org.exoplatform.commons.notification.template.DigestTemplate;
 import org.exoplatform.commons.notification.template.SimpleElement;
 import org.exoplatform.commons.notification.template.TemplateUtils;
@@ -48,6 +51,9 @@ public class NotificationUtils {
 
   public static final String FEATURE_NAME              = "notification";
   
+  private static final String emailRegex = "[_A-Za-z0-9-]+(\\.[_A-Za-z0-9-]+)*@[_A-Za-z0-9-.]+\\.[A-Za-z]{2,5}";
+  private static final Pattern EMAIL_PATTERN = Pattern.compile(emailRegex);
+
   public static String getDefaultKey(String key, String providerId) {
     return MessageFormat.format(key, providerId);
   }
@@ -166,14 +172,50 @@ public class NotificationUtils {
     addressList = StringUtils.replace(addressList, ";", ",");
     try {
       InternetAddress[] iAdds = InternetAddress.parse(addressList, true);
-      String emailRegex = "[_A-Za-z0-9-]+(\\.[_A-Za-z0-9-]+)*@[_A-Za-z0-9-.]+\\.[A-Za-z]{2,5}";
       for (int i = 0; i < iAdds.length; i++) {
-        if (!iAdds[i].getAddress().matches(emailRegex))
+        if (!EMAIL_PATTERN.matcher(iAdds[i].getAddress()).matches()){
           return false;
+        }
       }
     } catch (AddressException e) {
       return false;
     }
     return true;
   }
+  
+  public static String buildQueryNotification(String parentPath, String userName, boolean isWeekly) {
+    StringBuilder strQuery = new StringBuilder("SELECT * FROM ").append(AbstractService.NTF_MESSAGE).append(" WHERE ");
+
+    // ntf:sendToWeekly: ['&forAllUser'] OR ['demo', 'mary', 'john']
+    // ntf:sendToDaily: ['&forAllUser'] OR ['demo', 'mary', 'john']
+    // builds filter UserId to send daily or weekly
+    // for example: in case daily >> ntf:sendToDaily='demo'
+    // in case weekly >> ntf:sendToWeekly='demo'
+    if (isWeekly) {
+      strQuery.append(" jcr:path LIKE '").append(parentPath).append("/%'");
+      strQuery.append(" AND (").append(AbstractService.NTF_SEND_TO_WEEKLY).append("='").append(userName).append("'");
+    } else {
+      strQuery.append(" (jcr:path LIKE '").append(parentPath).append("/%'").append(" AND NOT jcr:path LIKE '").append(parentPath).append("/%/%')");
+      strQuery.append(" AND (").append(AbstractService.NTF_SEND_TO_DAILY).append("='").append(userName).append("'");
+    }
+
+    if (!NotificationInfo.FOR_ALL_USER.equals(userName)) {
+      strQuery.append(" OR ")
+              .append((isWeekly) ? AbstractService.NTF_SEND_TO_WEEKLY : AbstractService.NTF_SEND_TO_DAILY)
+              .append("='")
+              .append(NotificationInfo.FOR_ALL_USER)
+              .append("') AND ")
+              .append(AbstractService.NTF_FROM)
+              .append("<>'")
+              .append(userName)
+              .append("'");
+    } else {
+      strQuery.append(")");
+    }
+
+    return strQuery.toString();
+  }
+  
+  
+  
 }

@@ -14,8 +14,10 @@ import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.model.UserSetting;
 import org.exoplatform.commons.api.notification.model.UserSetting.FREQUENCY;
+import org.exoplatform.commons.api.notification.node.NTFInforkey;
+import org.exoplatform.commons.api.notification.node.TreeNode;
+import org.exoplatform.commons.api.notification.service.NotificationService;
 import org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage;
-import org.exoplatform.commons.api.notification.service.storage.NotificationService;
 import org.exoplatform.commons.testing.BaseCommonsTestCase;
 
 public class NotificationServiceTest extends BaseCommonsTestCase {
@@ -54,7 +56,7 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     notification.key("TestPlugin").setSendToDaily("root")
                 .setSendToWeekly("demo").setOwnerParameter(params).setOrder(1);
     notificationDataStorage.save(notification);
-    addMixin(notification.getId());
+    addMixin(notification);
     return notification;
   }
 
@@ -79,13 +81,16 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
                .addProvider("TestPlugin", FREQUENCY.DAILY);
     userSetting.setActive(true);
     
-    Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(userSetting);
+    TreeNode treeNode = notificationDataStorage.getByUser(userSetting);
     
-    List<NotificationInfo> list = map.get(new NotificationKey("TestPlugin"));
+    List<NTFInforkey> list = treeNode.getNFTInforkeys(new NotificationKey("TestPlugin"));
     assertEquals(1, list.size());
     
-    assertTrue(list.get(0).equals(notification));
+    assertEquals(list.get(0), new NTFInforkey(notification.getId()) );
+    
     // after sent, user demo will auto remove from property daily
+    notificationService.processEvents();
+    
     Node node = getMessageNodeByKeyIdAndParam("TestPlugin", "objectId=idofobject");
     assertNotNull(node);
     
@@ -95,13 +100,12 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     
     configuration.setSendWeekly(true);
     userSetting.setUserId("demo").addProvider("TestPlugin", FREQUENCY.WEEKLY);
-    map = notificationDataStorage.getByUser(userSetting);
-    list = map.get(new NotificationKey("TestPlugin"));
+    treeNode = notificationDataStorage.getByUser(userSetting);
+    list = treeNode.getNFTInforkeys(new NotificationKey("TestPlugin"));
     assertEquals(1, list.size());
-    
-    
-    notificationDataStorage.removeMessageAfterSent();
-    
+
+    // after sent weekly, the node removed
+    notificationService.processEvents();
     node = getMessageNodeByKeyIdAndParam("TestPlugin", "objectId=idofobject");
     assertNull(node);
   }
@@ -120,19 +124,20 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     userSetting.setActive(true);
     // Test send to daily
     configuration.setSendWeekly(false);
-    Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(userSetting);
+    TreeNode treeNode = notificationDataStorage.getByUser(userSetting);
     
-    List<NotificationInfo> list = map.get(new NotificationKey("TestPlugin"));
+    List<NTFInforkey> list = treeNode.getNFTInforkeys(new NotificationKey("TestPlugin"));
     assertEquals(1, list.size());
     
-    assertTrue(list.get(0).equals(notification));
+    assertEquals(list.get(0), new NTFInforkey(notification.getId()));
     // check value from node
     Node node = getMessageNodeByKeyIdAndParam("TestPlugin", "objectId=idofobject");
     assertNotNull(node);
     
     assertEquals(NotificationInfo.FOR_ALL_USER, fillModel(node).getSendToDaily()[0]);
-    // remove value on property sendToDaily
-    notificationDataStorage.removeMessageAfterSent();
+    
+    // after sent, user demo will auto remove from property daily
+    notificationService.processEvents();
 
     // after sent, the value on on property sendToDaily will auto removed
     node = getMessageNodeByKeyIdAndParam("TestPlugin", "objectId=idofobject");
@@ -141,23 +146,26 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     // Test send to weekly
     configuration.setSendWeekly(true);
     userSetting.setUserId("demo").addProvider("TestPlugin", FREQUENCY.WEEKLY);
-    map = notificationDataStorage.getByUser(userSetting);
-    list = map.get(new NotificationKey("TestPlugin"));
+    treeNode = notificationDataStorage.getByUser(userSetting);
+    list = treeNode.getNFTInforkeys(new NotificationKey("TestPlugin"));
     assertEquals(1, list.size());
     
-    notificationDataStorage.removeMessageAfterSent();
+    // after sent, user demo will auto remove from property daily
+    notificationService.processEvents();
     
     node = getMessageNodeByKeyIdAndParam("TestPlugin", "objectId=idofobject");
     assertNull(node);
   }
   
   
-  private void addMixin(String msgId) throws Exception {
-    Node msgNode = getMessageNodeById(msgId);
+  private void addMixin(NotificationInfo notification) throws Exception {
+    Node msgNode = getMessageNodeById(notification.getName());
     if (msgNode != null) {
       msgNode.addMixin("exo:datetime");
       msgNode.setProperty("exo:dateCreated", Calendar.getInstance());
       session.save();
+      notification.setId(msgNode.getUUID());
+      System.out.println(msgNode.getUUID());
     }
   }
   
@@ -167,29 +175,34 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
       .setFrom(node.getProperty("ntf:from").getString())
       .setOrder(Integer.valueOf(node.getProperty("ntf:order").getString()))
       .key(node.getProperty("ntf:providerType").getString())
-      .setOwnerParameter(node.getProperty("ntf:ownerParameter").getValues())
+      .setOwnerParameter(NotificationUtils.valuesToArray(node.getProperty("ntf:ownerParameter").getValues()))
       .setSendToDaily(NotificationUtils.valuesToArray(node.getProperty("ntf:sendToDaily").getValues()))
       .setSendToWeekly(NotificationUtils.valuesToArray(node.getProperty("ntf:sendToWeekly").getValues()))
-      .setId(node.getName());
+      .setName(node.getName())
+      .setId(node.getUUID());
     
     return message;
   }
   
   private Node getMessageNodeById(String msgId) throws Exception {
-    return getMessageNode(new StringBuffer("[fn:name() = '").append(msgId).append("']").toString(), "");
+    try {
+      return session.getNodeByUUID(msgId);
+    } catch (Exception e) {
+      return getMessageNode(new StringBuffer("(fn:name() = '").append(msgId).append("')").toString(), "");
+    }
   }
 
   private Node getMessageNodeByKeyIdAndParam(String key, String param) throws Exception {
     key = "/" + key;
-    return getMessageNode(new StringBuffer("[jcr:like(@ntf:ownerParameter, '%").append(param).append("%')]").toString(), key);
+    return getMessageNode(new StringBuilder("(ntf:ownerParameter LIKE '%").append(param).append("%')").toString(), key);
   }
   
-  private Node getMessageNode(String strQuery, String key) throws Exception {
-    StringBuffer queryBuffer = new StringBuffer("/jcr:root");
-    queryBuffer.append("/eXoNotification/messageHome").append(key).append("//element(*,").append("ntf:message").append(")").append(strQuery);
+  private Node getMessageNode(String statement, String key) throws Exception {
+    StringBuilder jcrQuery = new StringBuilder("SELECT * FROM ntf:message WHERE jcr:path LIKE '");
+    jcrQuery.append("/eXoNotification/messageHome").append(key).append("/%' AND ").append(statement);
 
     QueryManager qm = session.getWorkspace().getQueryManager();
-    Query query = qm.createQuery(queryBuffer.toString(), Query.XPATH);
+    Query query = qm.createQuery(jcrQuery.toString(), Query.SQL);
     NodeIterator iter = query.execute().getNodes();
     return (iter.getSize() > 0) ? iter.nextNode() : null;
   }

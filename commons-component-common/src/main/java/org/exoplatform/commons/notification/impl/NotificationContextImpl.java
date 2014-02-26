@@ -26,6 +26,7 @@ import org.exoplatform.commons.api.notification.command.NotificationExecutor;
 import org.exoplatform.commons.api.notification.model.ArgumentLiteral;
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.NotificationKey;
+import org.exoplatform.commons.api.notification.node.NTFInforkey;
 import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugin;
 import org.exoplatform.commons.api.notification.service.setting.PluginContainer;
 import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
@@ -42,7 +43,7 @@ public final class NotificationContextImpl implements NotificationContext {
   
   private NotificationInfo notification;
   
-  private List<NotificationInfo> notifications;
+  private List<NTFInforkey> notifications;
   
   private Exception exception;
   
@@ -148,12 +149,12 @@ public final class NotificationContextImpl implements NotificationContext {
   }
 
   @Override
-  public void setNotificationInfos(List<NotificationInfo> notifications) {
+  public void setNotificationInfos(List<NTFInforkey> notifications) {
     this.notifications = notifications;
   }
 
   @Override
-  public List<NotificationInfo> getNotificationInfos() {
+  public List<NTFInforkey> getNotificationInfos() {
     return this.notifications;
   }
   

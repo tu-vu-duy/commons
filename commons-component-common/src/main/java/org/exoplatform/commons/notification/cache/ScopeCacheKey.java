@@ -20,7 +20,7 @@ import java.io.Serializable;
 
 import javax.jcr.RepositoryException;
 
-import org.exoplatform.container.ExoContainerContext;
+import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.services.jcr.RepositoryService;
 
 public class ScopeCacheKey implements Serializable {
@@ -62,12 +62,10 @@ public class ScopeCacheKey implements Serializable {
   }
 
   public static String getCurrentRepositoryName() {
-    RepositoryService repositoryService = (RepositoryService)
-                                          ExoContainerContext.getCurrentContainer().getComponentInstanceOfType(RepositoryService.class);
+    RepositoryService repositoryService = CommonsUtils.getService(RepositoryService.class);
     try {
       return repositoryService.getCurrentRepository().getConfiguration().getName();
-    }
-    catch (RepositoryException e) {
+    } catch (RepositoryException e) {
       throw new RuntimeException(e);
     }
   }

@@ -14,11 +14,13 @@
 * You should have received a copy of the GNU General Public License
 * along with this program; if not, see<http://www.gnu.org/licenses/>.
  */
-package org.exoplatform.commons.api.notification.service.storage;
+package org.exoplatform.commons.api.notification.service;
 
 import java.util.Collection;
 
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
+import org.exoplatform.commons.api.notification.node.NTFInforkey;
+import org.exoplatform.services.listener.Event;
 
 
 public interface NotificationService {
@@ -27,20 +29,30 @@ public interface NotificationService {
    * 
    * @param notification The notification message.
    */
-  void process(NotificationInfo  notification) throws Exception;
-  
+  void process(NotificationInfo notification) throws Exception;
+
   /**
    * Collects information of a digest message and sends it daily or weekly.
-   *
+   * 
    * @throws Exception
    */
   void processDigest() throws Exception;
-  
+
   /**
    * Processes information when a list of notification messages are created.
    * 
    * @param notifications The list of notification messages.
    */
   void process(Collection<NotificationInfo> notifications) throws Exception;
+
+  /**
+   * @param event
+   */
+  void addEvent(Event<String, NTFInforkey> event);
+
+  /**
+   * 
+   */
+  void processEvents();
   
 }

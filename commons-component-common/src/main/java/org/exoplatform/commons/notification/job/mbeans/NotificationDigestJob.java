@@ -16,7 +16,7 @@
  */
 package org.exoplatform.commons.notification.job.mbeans;
 
-import org.exoplatform.commons.api.notification.service.storage.NotificationService;
+import org.exoplatform.commons.api.notification.service.NotificationService;
 import org.exoplatform.commons.notification.NotificationConfiguration;
 import org.exoplatform.commons.notification.job.NotificationJob;
 import org.exoplatform.commons.utils.CommonsUtils;

@@ -16,13 +16,9 @@
  */
 package org.exoplatform.commons.api.notification.service.template;
 
-import java.util.List;
-import java.util.Map;
-
 import org.exoplatform.commons.api.notification.model.MessageInfo;
-import org.exoplatform.commons.api.notification.model.NotificationKey;
-import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.UserSetting;
+import org.exoplatform.commons.api.notification.node.TreeNode;
 
 public interface DigestorService {
 
@@ -33,5 +29,5 @@ public interface DigestorService {
    * @param userSetting The user's notification settings.
    * @return The message.
    */
-  public MessageInfo buildMessage(Map<NotificationKey, List<NotificationInfo>> notificationData, UserSetting userSetting);
+  public MessageInfo buildMessage(TreeNode treeNode, UserSetting userSetting);
 }
