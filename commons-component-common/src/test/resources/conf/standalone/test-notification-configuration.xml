@@ -33,6 +33,11 @@
   </component>
 
   <component>
+    <key>org.exoplatform.commons.notification.impl.service.ExtendedNotificationService</key>
+    <type>org.exoplatform.commons.notification.impl.service.ExtendedNotificationService</type>
+  </component>
+
+  <component>
     <key>org.exoplatform.commons.api.notification.service.setting.UserSettingService</key>
     <type>org.exoplatform.commons.notification.impl.setting.UserSettingServiceImpl</type>
   </component>
@@ -50,6 +55,11 @@
   <component>
     <key>org.exoplatform.commons.notification.impl.service.storage.NotificationDataStorageImpl</key>
     <type>org.exoplatform.commons.notification.impl.service.storage.NotificationDataStorageImpl</type>
+  </component>
+
+  <component>
+    <key>org.exoplatform.commons.notification.impl.service.storage.ExtendedDataStorageImpl</key>
+    <type>org.exoplatform.commons.notification.impl.service.storage.ExtendedDataStorageImpl</type>
   </component>
 
   <component>

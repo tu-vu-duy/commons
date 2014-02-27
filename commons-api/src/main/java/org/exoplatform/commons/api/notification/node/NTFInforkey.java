@@ -18,6 +18,7 @@ package org.exoplatform.commons.api.notification.node;
 
 public class NTFInforkey {
   private String UUID;
+  private String pluginId;
 
   public NTFInforkey(String UUID) {
     this.UUID = UUID;
@@ -25,6 +26,15 @@ public class NTFInforkey {
 
   public String getUUID() {
     return this.UUID;
+  }
+
+  public String getPluginId() {
+    return pluginId;
+  }
+
+  public NTFInforkey setPluginId(String pluginId) {
+    this.pluginId = pluginId;
+    return this;
   }
 
   @Override

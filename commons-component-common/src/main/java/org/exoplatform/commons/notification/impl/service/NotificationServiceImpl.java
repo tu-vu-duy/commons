@@ -52,12 +52,12 @@ import org.exoplatform.services.mail.MailService;
 
 public class NotificationServiceImpl extends AbstractService implements NotificationService {
   private static final Log         LOG              = ExoLogger.getLogger(NotificationServiceImpl.class);
-  private final NotificationConfiguration configuration;
-  private final NotificationDataStorage storage;
-  private final PluginSettingService settingService;
-  private final UserSettingService userService;
-  private final MailService mailService;
-  private NTFListener listener;
+  protected final NotificationConfiguration configuration;
+  protected final NotificationDataStorage storage;
+  protected final PluginSettingService settingService;
+  protected final UserSettingService userService;
+  protected final MailService mailService;
+  protected final NTFListener listener;
 
   public NotificationServiceImpl(NotificationConfiguration configuration, NotificationDataStorage storage,
                                   PluginSettingService settingService, UserSettingService userService, MailService mailService) {
@@ -237,7 +237,7 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     }
   }
   
-  private UserSetting getDefaultUserSetting(List<String> activesProvider) {
+  protected UserSetting getDefaultUserSetting(List<String> activesProvider) {
     UserSetting setting = UserSetting.getInstance();
     UserSetting defaultSetting = UserSetting.getDefaultInstance();
     for (String string : activesProvider) {

@@ -16,6 +16,8 @@
  */
 package org.exoplatform.commons.notification.mock;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Future;
 
 import javax.mail.Session;
@@ -29,6 +31,7 @@ import org.exoplatform.services.mail.Message;
 
 public class MockMailService implements MailService {
   private static final Log LOG = ExoLogger.getExoLogger(MockMailService.class);
+  private List<String> sentUser = new ArrayList<String>();
 
   @Override
   public Session getMailSession() {
@@ -42,17 +45,21 @@ public class MockMailService implements MailService {
 
   @Override
   public void sendMessage(String from, String to, String subject, String body) throws Exception {
-
   }
 
   @Override
   public void sendMessage(Message message) throws Exception {
     String sendTo = message.getTo();
+    sentUser.add(sendTo);
     if (NotificationUtils.isValidEmailAddresses(sendTo)) {
       LOG.info("Sent mail notification to email: " + sendTo);
     } else {
-      LOG.error("Failed to sending mail notification to email: " + sendTo);
+      LOG.warn("Failed to sending mail notification to email: " + sendTo);
     }
+  }
+  
+  public List<String> getSentUser() {
+    return sentUser;
   }
 
   @Override

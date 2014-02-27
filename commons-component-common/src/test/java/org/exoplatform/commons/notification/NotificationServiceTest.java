@@ -17,7 +17,11 @@ import org.exoplatform.commons.api.notification.model.UserSetting.FREQUENCY;
 import org.exoplatform.commons.api.notification.node.NTFInforkey;
 import org.exoplatform.commons.api.notification.node.TreeNode;
 import org.exoplatform.commons.api.notification.service.NotificationService;
+import org.exoplatform.commons.api.notification.service.QueueMessage;
+import org.exoplatform.commons.api.notification.service.setting.UserSettingService;
 import org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage;
+import org.exoplatform.commons.notification.impl.service.ExtendedNotificationService;
+import org.exoplatform.commons.notification.mock.MockMailService;
 import org.exoplatform.commons.testing.BaseCommonsTestCase;
 
 public class NotificationServiceTest extends BaseCommonsTestCase {
@@ -110,6 +114,48 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     assertNull(node);
   }
 
+  public void testNormalExtendedDataStorageImpl() throws Exception {
+    NotificationConfiguration configuration = getService(NotificationConfiguration.class);
+    saveNotification();
+    UserSetting userSetting = UserSetting.getInstance();
+    userSetting.setUserId("root")
+    .addProvider("TestPlugin", FREQUENCY.DAILY);
+    userSetting.setActive(true);
+    
+    UserSettingService settingService = getService(UserSettingService.class);
+    settingService.save(userSetting);
+    
+    ExtendedNotificationService extendService = getService(ExtendedNotificationService.class);
+    
+    configuration.setSendWeekly(false);
+    extendService.processDigest();
+    // send mails
+    getService(QueueMessage.class).send();
+    
+    // result sent.
+    System.out.println(getService(MockMailService.class).getSentUser());
+    
+    
+    Node node = getMessageNodeByKeyIdAndParam("TestPlugin", "objectId=idofobject");
+    assertNotNull(node);
+    
+    NotificationInfo notification = fillModel(node);
+    assertEquals(0, notification.getSendToDaily().length);
+
+    userSetting.setUserId("demo").addProvider("TestPlugin", FREQUENCY.WEEKLY);
+    settingService.save(userSetting);
+
+    // after sent weekly, the node removed
+    configuration.setSendWeekly(true);
+    extendService.processDigest();
+
+    //
+    node = getMessageNodeByKeyIdAndParam("TestPlugin", "objectId=idofobject");
+    assertNull(node);
+  }
+
+  
+  
   public void testSpecialGetByUserAndRemoveMessagesSent() throws Exception {
     NotificationConfiguration configuration = getService(NotificationConfiguration.class);
     NotificationInfo notification = NotificationInfo.instance();
