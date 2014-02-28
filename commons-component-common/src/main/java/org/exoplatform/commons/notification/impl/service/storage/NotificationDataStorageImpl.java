@@ -153,13 +153,13 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
     
     TreeNode treeNode = new TreeNode(setting.getUserId());
     try {
-      
+
       boolean isWeekly = configuration.isSendWeekly();
-      
+
       List<String> plugins = (isWeekly) ? setting.getWeeklyProviders() : setting.getDailyProviders();
 
       treeNode.intPluginNodes(plugins);
-      
+
       for (String pluginId : plugins) {
         addNotifications(sProvider, treeNode, pluginId, isWeekly);
       }
@@ -178,7 +178,7 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
     return parentNodeMap.get().get(pluginId);
   }
   
-  private Node getDaily(SessionProvider sProvider, String pluginId) throws Exception {
+  public Node getDaily(SessionProvider sProvider, String pluginId) throws Exception {
     Node node = getParentNodeByThreadLocal(pluginId);
     if (node == null || node.getSession() == null || !node.getSession().isLive()) {
       // In the case session what hold by Node has been NULL or isLive is FALSE
@@ -190,7 +190,7 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
     return node;
   }
 
-  private Node getWeekly(SessionProvider sProvider, String pluginId) throws Exception {
+  public Node getWeekly(SessionProvider sProvider, String pluginId) throws Exception {
     Node node = getParentNodeByThreadLocal(pluginId);
     // In the case session what hold by Node has been NULL or isLive is FALSE
     // must re-load Node from JCR
@@ -228,6 +228,26 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
     Query query = qm.createQuery(strQuery.toString(), Query.SQL);
     NodeIterator it = query.execute().getNodes();
 
+    // record statistics insert entity
+    if (stats) {
+      NotificationContextFactory.getInstance().getStatisticsCollector().queryExecuted(strQuery.toString(), it.getSize(), System.currentTimeMillis() - startTime);
+    }
+    return it;
+  }
+
+  private NodeIterator getNotificationsByQuery(Node messageHomeNode, boolean isWeekly, String userName) throws Exception {
+    final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
+    long startTime = 0;
+    if (stats) {
+      startTime = System.currentTimeMillis();
+    }
+    
+    String strQuery = NotificationUtils.buildQueryNotification(messageHomeNode.getPath(), userName, isWeekly);
+    
+    QueryManager qm = messageHomeNode.getSession().getWorkspace().getQueryManager();
+    Query query = qm.createQuery(strQuery.toString(), Query.SQL);
+    NodeIterator it = query.execute().getNodes();
+    
     // record statistics insert entity
     if (stats) {
       NotificationContextFactory.getInstance().getStatisticsCollector().queryExecuted(strQuery.toString(), it.getSize(), System.currentTimeMillis() - startTime);

@@ -118,10 +118,6 @@
     <type>org.exoplatform.commons.notification.impl.setting.NotificationPluginContainer</type>
   </component>
 
-  <component>
-    <type>org.exoplatform.commons.notification.cache.TemplateCaching</type>
-  </component>
-  
   <external-component-plugins>
      <target-component>org.exoplatform.services.scheduler.JobSchedulerService</target-component>    
      <component-plugin>

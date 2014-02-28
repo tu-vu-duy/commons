@@ -135,10 +135,6 @@
     <type>org.exoplatform.commons.notification.impl.setting.NotificationPluginContainer</type>
   </component>
 
-  <component>
-    <type>org.exoplatform.commons.notification.cache.TemplateCaching</type>
-  </component>
-
   <external-component-plugins>
     <target-component>org.exoplatform.services.jcr.ext.hierarchy.NodeHierarchyCreator</target-component>
     <component-plugin>
@@ -295,10 +291,10 @@
             <field name="templateConfig">
               <object type="org.exoplatform.commons.api.notification.plugin.config.TemplateConfig">
                 <field name="bundlePath">
-                  <string>locale.notification.template.CommonsNotification</string>
+                  <string>locale.notification.template.Notification</string>
                 </field>
                 <field name="templatePath">
-                  <string>war:/notification/templates/DigestDailyPlugin.gtmpl</string>
+                  <string>classpath:/groovy/notification/template/DigestDailyPlugin.gtmpl</string>
                 </field>
               </object>
             </field>
@@ -329,10 +325,10 @@
             <field name="templateConfig">
               <object type="org.exoplatform.commons.api.notification.plugin.config.TemplateConfig">
                 <field name="bundlePath">
-                  <string>locale.notification.template.CommonsNotification</string>
+                  <string>locale.notification.template.Notification</string>
                 </field>
                 <field name="templatePath">
-                  <string>war:/notification/templates/DigestWeeklyPlugin.gtmpl</string>
+                  <string>classpath:/groovy/notification/template/DigestWeeklyPlugin.gtmpl</string>
                 </field>
               </object>
             </field>

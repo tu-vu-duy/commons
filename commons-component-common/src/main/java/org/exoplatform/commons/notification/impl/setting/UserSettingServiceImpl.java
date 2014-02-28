@@ -320,7 +320,9 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
     model.setDailyProviders(getValues(node, EXO_DAILY));
     model.setWeeklyProviders(getValues(node, EXO_WEEKLY));
     model.setUserId(node.getParent().getName());
-    model.setLastUpdateTime(node.getParent().getProperty(EXO_LAST_MODIFIED_DATE).getDate());
+    if(node.getParent().hasProperty(EXO_LAST_MODIFIED_DATE)) {
+      model.setLastUpdateTime(node.getParent().getProperty(EXO_LAST_MODIFIED_DATE).getDate());
+    }
     return model;
   }
   

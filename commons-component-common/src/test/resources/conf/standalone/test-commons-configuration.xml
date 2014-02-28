@@ -19,10 +19,6 @@
   </component>
 
   <component>
-    <type>org.exoplatform.commons.notification.cache.TemplateCaching</type>
-  </component>
-
-  <component>
     <key>org.exoplatform.services.resources.LocaleConfigService</key>
     <type>org.exoplatform.services.resources.impl.LocaleConfigServiceImpl</type>
     <init-params>

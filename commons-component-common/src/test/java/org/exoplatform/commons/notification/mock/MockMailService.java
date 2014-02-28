@@ -58,8 +58,10 @@ public class MockMailService implements MailService {
     }
   }
   
-  public List<String> getSentUser() {
-    return sentUser;
+  public List<String> getAndClearSentsUser() {
+    List<String> list = new ArrayList<String>(sentUser);
+    sentUser.clear();
+    return list;
   }
 
   @Override

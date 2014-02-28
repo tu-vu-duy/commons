@@ -63,6 +63,10 @@ public class ExtendedNotificationService extends NotificationServiceImpl {
     try {
       dataStorage.resetParentNodeMap();
       List<NTFInforkey> inforKeys = CommonsUtils.getService(ExtendedDataStorageImpl.class).getNotificationInfos();
+      if(inforKeys.size() == 0) {
+        return;
+      }
+
       Map<String, NTFInforkey> inforKeyMap = new HashMap<String, NTFInforkey>(); 
       for (NTFInforkey ntfInforkey : inforKeys) {
         inforKeyMap.put(ntfInforkey.getPluginId(), ntfInforkey);
