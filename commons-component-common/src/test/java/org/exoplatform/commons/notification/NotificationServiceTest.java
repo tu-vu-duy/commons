@@ -7,6 +7,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
@@ -331,13 +332,20 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     assertNull(node);
   }
 
-  public void testPerfomanceExtendNotification() throws Exception {
+  public void testZPerfomanceExtendNotification() throws Exception {
     PluginContainer container = getService(PluginContainer.class);
     NotificationConfiguration configuration = getService(NotificationConfiguration.class);
     QueueMessageImpl messageImpl = getService(QueueMessageImpl.class);
     messageImpl.makeJob(10000, 10000);
     // register plugins
     int pluginSize = 10;
+    int userSize = 100;
+    int numberNotificationPerPlugin = 10;
+
+    System.out.println("Number of users: " + userSize);
+    System.out.println("Number of plugins: " + pluginSize);
+    System.out.println("Number of Notification per plugin: " + numberNotificationPerPlugin);
+    
     List<String> pluginIds = new ArrayList<String>();
     for (int i = 0; i < pluginSize; i++) {
       String plnId = "TestPlugin" + i;
@@ -345,11 +353,29 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
       pluginIds.add(plnId);
     }
     // setting for 100 users and active all plugins for each user.
-    List<String> users = createUser(100, pluginIds);
+    List<String> users = createUser(userSize, pluginIds);
+    //
+    Map<String, List<String>> dataUsers = new HashMap<String, List<String>>();
+    
+    for (int i = 0; i < numberNotificationPerPlugin; i++) {
+      int mUser = users.size();
+      int size = new Random().nextInt(30) + 10, start = new Random().nextInt(mUser);
+      if ((start + size) > mUser) {
+        start = mUser - size - 1;
+      }
+      dataUsers.put("" + i, users.subList(start, start + size));
+    }
+    //
     Map<String, Long> results = new HashMap<String, Long>();
+    String date = "/d" + Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
+    /*
     { // Test for extend
       // create notification information and active for all users.
-      createNotificationInfo(container, users, pluginSize);
+      for (int i = 0; i < numberNotificationPerPlugin; i++) {
+        //
+        createNotificationInfo(container, pluginSize, dataUsers.get("" + i));
+        System.out.println(i);
+      }
 
       // process send daily
       configuration.setSendWeekly(false);
@@ -376,10 +402,22 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
       // result
       System.out.println("\n\n The mails sent: " + getService(MockMailService.class).getAndClearSentsUser().size() + "\n");
     }
+    //
+    System.out.println("Remove old NotificationInfo..... ");
+    for (int i = 0; i < pluginSize; i++) {
+      session.getItem("/eXoNotification/messageHome/TestPlugin" + i + date).remove();
+      session.save();
+    }
 
+*/
     { // test for down tree
+      System.out.println("createNotificationInfo: ");
       // create notification information and active for all users.
-      createNotificationInfo(container, users, pluginSize);
+      for (int i = 0; i < numberNotificationPerPlugin; i++) {
+        //
+        createNotificationInfo(container, pluginSize, dataUsers.get("" + i));
+        System.out.println(i);
+      }
 
       // process send daily
       configuration.setSendWeekly(false);
@@ -405,22 +443,72 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
       // result
       System.out.println("\n\n The mails sent: " + getService(MockMailService.class).getAndClearSentsUser().size() + "\n");
     }
+    //
+    System.out.println("Remove old NotificationInfo..... ");
+    for (int i = 0; i < pluginSize; i++) {
+      session.getItem("/eXoNotification/messageHome/TestPlugin" + i + date).remove();
+      session.save();
+    }
     
-    System.out.println("\n\n Results:\n" + results.toString().replace("{", "{\n  ").replace("}", "}\n").replace(",", ",\n  ") + "\n");
+    { // test for down tree
+      System.out.println("createNotificationInfo: ");
+      // create notification information and active for all users.
+      for (int i = 0; i < numberNotificationPerPlugin; i++) {
+        //
+        createNotificationInfo(container, pluginSize, dataUsers.get("" + i));
+        System.out.println(i);
+      }
+      dataUsers.clear();
+      
+      ExtendedNotificationService extendService = getService(ExtendedNotificationService.class);
+      // process send daily
+      configuration.setSendWeekly(false);
+      long t = System.currentTimeMillis();
+      extendService.processDigests();
+      results.put("New_daily", (System.currentTimeMillis() - t));
+      System.out.println("\n\n The time for normal process daily: " + results.get("New_daily") + "ms\n\n");
+      
+      // send mails
+      messageImpl.send();
+      // result
+      System.out.println("\n\n The mails sent: " + getService(MockMailService.class).getAndClearSentsUser().size() + "\n");
+      
+      // process send weekly
+      configuration.setSendWeekly(false);
+      t = System.currentTimeMillis();
+      extendService.processDigests();
+      results.put("New_weekly", (System.currentTimeMillis() - t));
+      System.out.println("\n\n The time for normal process weekly: " + results.get("New_weekly") + "ms\n\n");
+      
+      // send mails
+      messageImpl.send();
+      // result
+      System.out.println("\n\n The mails sent: " + getService(MockMailService.class).getAndClearSentsUser().size() + "\n");
+    }
+    
+    for (int i = 0; i < pluginSize; i++) {
+      System.out.println(((Node)session.getItem("/eXoNotification/messageHome/TestPlugin" + i + date)).getNodes().getSize());
+    }
+    
+    System.out.println("\n\n Results:\n" + results.toString().replace("{", "{\n  ").replace("}", "\n}").replace(",", ",\n ") + "\n");
   }
 
-  private void createNotificationInfo(PluginContainer container, List<String> users, int number) throws Exception {
+  private List<String> createNotificationInfo(PluginContainer container, int number, List<String> subUsers) throws Exception {
+
     for (int i = 0; i < number; i++) {
       AbstractNotificationPlugin plugin = container.getPlugin(new NotificationKey("TestPlugin" + i));
       // This process will storage notification via settings of users on system.
       NotificationContext ctx = NotificationContextImpl.cloneInstance();
-      ctx.append(SENDTOS, users);
+      // ctx.append(SENDTOS, users);
+      ctx.append(SENDTOS, subUsers);
       notificationService.process(plugin.buildNotification(ctx));
     }
+    return subUsers;
   }
 
   private List<String> createUser(int number, List<String> pluginIds) throws Exception {
     List<String> users = new ArrayList<String>();
+    System.out.print("\nCreating user...");
     for (int i = 0; i < number; ++i) {
       String userId = "user" + i;
       User user = userHandler.createUserInstance(userId);
@@ -439,7 +527,9 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
       userSetting.setWeeklyProviders(pluginIds);
       userSetting.setActive(true);
       userSettingService.save(userSetting);
+      System.out.print(".");
     }
+    System.out.println("");
     return users;
   }
 

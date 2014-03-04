@@ -27,7 +27,7 @@ public class NotificationCacheKey extends ScopeCacheKey {
     this.key = key;
   }
 
-  public NTFInforkey getKey() {
+  public NTFInforkey getInfoKey() {
     return key;
   }
 
@@ -41,7 +41,7 @@ public class NotificationCacheKey extends ScopeCacheKey {
       return false;
 
     NotificationCacheKey that = (NotificationCacheKey) o;
-    return that.getKey().equals(this.getKey());
+    return that.getInfoKey().equals(this.getInfoKey());
   }
 
   @Override

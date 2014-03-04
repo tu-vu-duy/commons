@@ -39,6 +39,11 @@
 
   <component>
     <key>org.exoplatform.commons.api.notification.service.setting.UserSettingService</key>
+    <type>org.exoplatform.commons.notification.impl.service.cache.UserSettingCacheService</type>
+  </component>
+
+  <component>
+    <key>org.exoplatform.commons.notification.impl.setting.UserSettingServiceImpl</key>
     <type>org.exoplatform.commons.notification.impl.setting.UserSettingServiceImpl</type>
   </component>
 

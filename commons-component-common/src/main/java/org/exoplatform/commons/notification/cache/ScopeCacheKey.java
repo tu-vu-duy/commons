@@ -29,9 +29,20 @@ public class ScopeCacheKey implements Serializable {
   public final static ScopeCacheKey NULL = new ScopeCacheKey();
 
   private final String scope;
+  private final String key;
 
   public ScopeCacheKey() {
     scope = getCurrentRepositoryName();
+    key = null;
+  }
+
+  public ScopeCacheKey(String key) {
+    this.key = key;
+    scope = getCurrentRepositoryName();
+  }
+
+  public String getKey() {
+    return key;
   }
 
   public String getScope() {
@@ -53,12 +64,19 @@ public class ScopeCacheKey implements Serializable {
       return false;
     }
 
+    if (key != null ? !key.equals(that.key) : that.key != null) {
+      return false;
+    }
+
     return true;
   }
 
   @Override
   public int hashCode() {
-    return scope != null ? scope.hashCode() : 0;
+    int c = super.hashCode();
+    c += 31 * c + (key != null ? key.hashCode() : 0);
+    c += 31 * c + (scope != null ? scope.hashCode() : 0);
+    return c;
   }
 
   public static String getCurrentRepositoryName() {

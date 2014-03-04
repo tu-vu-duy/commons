@@ -37,6 +37,7 @@ import org.exoplatform.commons.notification.NotificationConfiguration;
 import org.exoplatform.commons.notification.NotificationUtils;
 import org.exoplatform.commons.notification.impl.AbstractService;
 import org.exoplatform.commons.notification.impl.NotificationSessionManager;
+import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.services.jcr.ext.common.SessionProvider;
 import org.exoplatform.services.jcr.impl.core.query.QueryImpl;
 import org.exoplatform.services.log.ExoLogger;
@@ -274,19 +275,19 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   
   @Override
   public List<UserSetting> getDaily(int offset, int limit) {
-//    SessionProvider sProvider = SessionProvider.createSystemProvider();
+    UserSettingService service = CommonsUtils.getService(UserSettingService.class);
     SessionProvider sProvider = NotificationSessionManager.createSystemProvider();
     List<UserSetting> models = new ArrayList<UserSetting>();
     try {
       NodeIterator iter = getDailyIterator(sProvider, offset, limit, null);
       while (iter != null && iter.hasNext()) {
         Node node = iter.nextNode();
-        models.add(fillModel(node));
+        //
+        models.add(service.get(node.getParent().getName()));
+//        models.add(fillModel(node));
       }
     } catch (Exception e) {
       LOG.error("Failed to get all daily users have notification messages", e);
-    } finally {
-//      sProvider.close();
     }
 
     return models;
@@ -354,7 +355,6 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
 
   @Override
   public List<UserSetting> getDefaultDaily(int offset, int limit) {
-//    SessionProvider sProvider = SessionProvider.createSystemProvider();
     SessionProvider sProvider = NotificationSessionManager.createSystemProvider();
     List<UserSetting> users = new ArrayList<UserSetting>();
     try {
@@ -371,8 +371,6 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
       }
     } catch (Exception e) {
       LOG.error("Failed to get default daily users have notification messages", e);
-    } finally {
-//      sProvider.close();
     }
 
     return users;
@@ -389,8 +387,6 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
       }
     } catch (Exception e) {
       LOG.error("Failed to get default daily users have notification messages", e);
-    } finally {
-//      sProvider.close();
     }
     return 0;
   }

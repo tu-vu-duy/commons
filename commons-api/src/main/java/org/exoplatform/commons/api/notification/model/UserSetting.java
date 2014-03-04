@@ -16,6 +16,7 @@
  */
 package org.exoplatform.commons.api.notification.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -27,7 +28,9 @@ import org.exoplatform.container.PortalContainer;
  * User setting notification
  */
 
-public class UserSetting {
+public class UserSetting implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   private static UserSetting defaultSetting = null;
   
   public enum FREQUENCY {

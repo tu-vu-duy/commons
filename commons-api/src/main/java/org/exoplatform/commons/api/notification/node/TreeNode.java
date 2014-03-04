@@ -107,32 +107,4 @@ public class TreeNode {
     }
 
   }
-
-  private class PluginNode {
-
-    private NotificationKey   key;
-    private List<NTFInforkey> inforkeys;
-
-    public PluginNode(NotificationKey key) {
-      this.key = key;
-      this.inforkeys = new ArrayList<NTFInforkey>();
-    }
-
-    public NotificationKey getKey() {
-      return key;
-    }
-
-    public void add(NTFInforkey infoUUIDs) {
-      this.inforkeys.add(infoUUIDs);
-    }
-
-    public boolean remove(NTFInforkey infoUUIDs) {
-      return this.inforkeys.remove(infoUUIDs);
-    }
-
-    public List<NTFInforkey> getNotificationInfos() {
-      return this.inforkeys;
-    }
-  }
-  
 }

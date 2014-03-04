@@ -162,9 +162,9 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     if (userNotificationSetting.isInWeekly(pluginId)) {
       message.setSendToWeekly(userId);
     }
-    
+
   }
-  
+
   @Override
   public void processDigest() throws Exception {
     /**
@@ -258,6 +258,8 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
 
   @Override
   public void processEvents() {
+    System.out.print("\n\n\n processEvents...........");
     this.listener.processEvents((configuration.isSendWeekly()) ? NTFEvent.NAME.WEEKLY : NTFEvent.NAME.DAILY);
+    System.out.println("....end");
   }
 }

@@ -22,12 +22,17 @@ import java.util.List;
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
 
+import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.node.NTFInforkey;
+import org.exoplatform.commons.api.notification.node.PluginNode;
+import org.exoplatform.commons.api.notification.service.NotificationService;
+import org.exoplatform.commons.api.notification.service.listener.NTFEvent;
 import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
 import org.exoplatform.commons.notification.NotificationConfiguration;
 import org.exoplatform.commons.notification.NotificationUtils;
 import org.exoplatform.commons.notification.impl.AbstractService;
 import org.exoplatform.commons.notification.impl.NotificationSessionManager;
+import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.services.jcr.ext.common.SessionProvider;
 
 public class ExtendedDataStorageImpl extends AbstractService {
@@ -41,16 +46,35 @@ public class ExtendedDataStorageImpl extends AbstractService {
     this.dataStorage = dataStorage;
   }
   
-  public List<NTFInforkey> getNotificationInfos() throws Exception {
-    SessionProvider sProvider = NotificationSessionManager.createSystemProvider();
+  public List<NTFInforkey> getNotificationInfos(String pluginId) throws Exception {
+    SessionProvider sProvider = NotificationSessionManager.getOrCreateSessionProvider();
     List<NTFInforkey> inforkeys = new ArrayList<NTFInforkey>();
     boolean isWeekly = configuration.isSendWeekly();
+    if (isWeekly) {
+      addWeeklyNotification(sProvider, inforkeys, pluginId);
+    } else {
+      addDailyNotification(sProvider, inforkeys, pluginId);
+    }
+    return inforkeys;
+  }
+
+  public PluginNode getPluginNotificationInfos(String pluginId) throws Exception {
+    NotificationService notificationService = CommonsUtils.getService(NotificationService.class);
+    List<NTFInforkey> inforkeys = getNotificationInfos(pluginId);
+    PluginNode pluginNode = new PluginNode(new NotificationKey(pluginId));
+    pluginNode.setWeekly(configuration.isSendWeekly());
+    for (NTFInforkey ntfInforkey : inforkeys) {
+      pluginNode.add(ntfInforkey);
+      //
+      notificationService.addEvent(NTFEvent.createNTFEvent(pluginId, ntfInforkey, pluginNode.isWeekly()));
+    }
+    return pluginNode;
+  }
+  
+  public List<NTFInforkey> getNotificationInfos() throws Exception {
+    List<NTFInforkey> inforkeys = new ArrayList<NTFInforkey>();
     for (String pluginId : pluginService.getActivePluginIds()) {
-      if (isWeekly) {
-        addWeeklyNotification(sProvider, inforkeys, pluginId);
-      } else {
-        addDailyNotification(sProvider, inforkeys, pluginId);
-      }
+      inforkeys.addAll(getNotificationInfos(pluginId));
     }
     return inforkeys;
   }
@@ -73,6 +97,7 @@ public class ExtendedDataStorageImpl extends AbstractService {
       Node node = iter.nextNode();
       NodeIterator iter2 = node.getNodes();
       while (iter2.hasNext()) {
+        //
         Node infoNode = iter2.nextNode();
         if (NotificationUtils.valuesToList(infoNode.getProperty(NTF_SEND_TO_WEEKLY).getValues()).size() > 0) {
           inforkeys.add(new NTFInforkey(infoNode.getUUID()).setPluginId(pluginId));

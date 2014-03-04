@@ -24,8 +24,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
 import javax.jcr.Session;
-import javax.jcr.query.Query;
-import javax.jcr.query.QueryManager;
 
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.NotificationKey;
@@ -201,59 +199,50 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
 
     return node;
   }
-  
+
   private void addNotifications(SessionProvider sProvider, TreeNode treeNode, String pluginId, boolean isWeekly) throws Exception {
-    Node messageHomeNode = (isWeekly) ? getWeekly(sProvider, pluginId) : getDaily(sProvider, pluginId);
+    if (isWeekly) {
+      addWeeklyNotification(sProvider, treeNode, pluginId);
+    } else {
+      addDailyNotification(sProvider, treeNode, pluginId);
+    }
+  }
+
+  private void addDailyNotification(SessionProvider sProvider, TreeNode treeNode, String pluginId) throws Exception {
     NotificationService notificationService = CommonsUtils.getService(NotificationService.class);
-    //
-    NodeIterator iter = getNotifications(messageHomeNode, isWeekly, treeNode.getUserName());
+    Node parentNode = getDaily(sProvider, pluginId);
+    NodeIterator iter = parentNode.getNodes();
+    List<String> users;
     while (iter.hasNext()) {
       Node node = iter.nextNode();
-      treeNode.add(new NotificationKey(pluginId), new NTFInforkey(node.getUUID()));
-      //
-      notificationService.addEvent(NTFEvent.createNTFEvent(treeNode.getUserName(), new NTFInforkey(node.getUUID()), isWeekly));
+      users = NotificationUtils.valuesToList(node.getProperty(NTF_SEND_TO_DAILY).getValues());
+      if (users.size() > 0 && (users.contains(treeNode.getUserName()) || users.contains(NotificationInfo.FOR_ALL_USER))) {
+        treeNode.add(new NotificationKey(pluginId), new NTFInforkey(node.getUUID()));
+        //
+        notificationService.addEvent(NTFEvent.createNTFEvent(treeNode.getUserName(), new NTFInforkey(node.getUUID()), false));
+      }
     }
   }
 
-  private NodeIterator getNotifications(Node messageHomeNode, boolean isWeekly, String userName) throws Exception {
-    final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
-    long startTime = 0;
-    if (stats) {
-      startTime = System.currentTimeMillis();
+  private void addWeeklyNotification(SessionProvider sProvider, TreeNode treeNode, String pluginId) throws Exception {
+    NotificationService notificationService = CommonsUtils.getService(NotificationService.class);
+    Node parentNode = getWeekly(sProvider, pluginId);
+    NodeIterator iter = parentNode.getNodes();
+    List<String> users;
+    while (iter.hasNext()) {
+      Node node = iter.nextNode();
+      NodeIterator iter2 = node.getNodes();
+      while (iter2.hasNext()) {
+        //
+        Node infoNode = iter2.nextNode();
+        users = NotificationUtils.valuesToList(infoNode.getProperty(NTF_SEND_TO_WEEKLY).getValues());
+        if (users.size() > 0 && (users.contains(treeNode.getUserName()) || users.contains(NotificationInfo.FOR_ALL_USER))) {
+          treeNode.add(new NotificationKey(pluginId), new NTFInforkey(infoNode.getUUID()));
+          //
+          notificationService.addEvent(NTFEvent.createNTFEvent(treeNode.getUserName(), new NTFInforkey(infoNode.getUUID()), true));
+        }
+      }
     }
-
-    String strQuery = NotificationUtils.buildQueryNotification(messageHomeNode.getPath(), userName, isWeekly);
-
-    QueryManager qm = messageHomeNode.getSession().getWorkspace().getQueryManager();
-    Query query = qm.createQuery(strQuery.toString(), Query.SQL);
-    NodeIterator it = query.execute().getNodes();
-
-    // record statistics insert entity
-    if (stats) {
-      NotificationContextFactory.getInstance().getStatisticsCollector().queryExecuted(strQuery.toString(), it.getSize(), System.currentTimeMillis() - startTime);
-    }
-    return it;
   }
-
-  private NodeIterator getNotificationsByQuery(Node messageHomeNode, boolean isWeekly, String userName) throws Exception {
-    final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
-    long startTime = 0;
-    if (stats) {
-      startTime = System.currentTimeMillis();
-    }
-    
-    String strQuery = NotificationUtils.buildQueryNotification(messageHomeNode.getPath(), userName, isWeekly);
-    
-    QueryManager qm = messageHomeNode.getSession().getWorkspace().getQueryManager();
-    Query query = qm.createQuery(strQuery.toString(), Query.SQL);
-    NodeIterator it = query.execute().getNodes();
-    
-    // record statistics insert entity
-    if (stats) {
-      NotificationContextFactory.getInstance().getStatisticsCollector().queryExecuted(strQuery.toString(), it.getSize(), System.currentTimeMillis() - startTime);
-    }
-    return it;
-  }
-  
 
 }

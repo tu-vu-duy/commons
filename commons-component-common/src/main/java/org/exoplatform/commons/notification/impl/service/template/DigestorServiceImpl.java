@@ -18,9 +18,7 @@ package org.exoplatform.commons.notification.impl.service.template;
 
 import java.io.StringWriter;
 import java.io.Writer;
-import java.util.Calendar;
 import java.util.List;
-import java.util.Locale;
 
 import org.exoplatform.commons.api.notification.NotificationContext;
 import org.exoplatform.commons.api.notification.model.MessageInfo;
@@ -35,15 +33,12 @@ import org.exoplatform.commons.api.notification.service.template.DigestorService
 import org.exoplatform.commons.api.notification.service.template.TemplateContext;
 import org.exoplatform.commons.notification.NotificationConfiguration;
 import org.exoplatform.commons.notification.NotificationContextFactory;
-import org.exoplatform.commons.notification.impl.DigestDailyPlugin;
-import org.exoplatform.commons.notification.impl.DigestWeeklyPlugin;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.notification.impl.setting.NotificationPluginContainer;
 import org.exoplatform.commons.notification.template.TemplateUtils;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
-import org.exoplatform.webui.utils.TimeConvertUtils;
 
 public class DigestorServiceImpl implements DigestorService {
   
@@ -127,93 +122,6 @@ public class DigestorServiceImpl implements DigestorService {
     }
     
     return messageInfo;
-  }
-  
-  private class DigestInfo {
-    private String  firstName;
-
-    private String  portalName;
-    
-    private String  portalHome;
-
-    private String  sendTo;
-
-    private String  footerLink;
-
-    private String  fromTo     = "Today";
-
-    private String  periodType = fromTo;
-
-    private String  pluginId   = DigestDailyPlugin.ID;
-
-    private Locale  locale;
-
-    private boolean isWeekly;
-
-    public DigestInfo(NotificationConfiguration configuration, UserSetting userSetting) {
-      firstName = NotificationPluginUtils.getFirstName(userSetting.getUserId());
-      sendTo = NotificationPluginUtils.getTo(userSetting.getUserId());
-      portalName = NotificationPluginUtils.getBrandingPortalName();
-      portalHome = NotificationPluginUtils.getPortalHome(portalName);
-      footerLink = NotificationPluginUtils.getProfileUrl(userSetting.getUserId());
-      String language = NotificationPluginUtils.getLanguage(userSetting.getUserId());
-      locale = (language == null || language.length() == 0) ? Locale.ENGLISH : new Locale(language);
-      
-      isWeekly = (configuration.isSendWeekly() && userSetting.getWeeklyProviders().size() > 0);
-      //
-      if(isWeekly) {
-        pluginId = DigestWeeklyPlugin.ID;
-        periodType = "Weekly";
-        //
-        Calendar periodFrom = userSetting.getLastUpdateTime();
-        long t = System.currentTimeMillis() - 604800000;
-        if(t > periodFrom.getTimeInMillis()) {
-          periodFrom.setTimeInMillis(t);
-        }
-        StringBuffer buffer = new StringBuffer();
-        buffer.append(TimeConvertUtils.getFormatDate(periodFrom.getTime(), "mmmm dd", locale))
-              .append(" - ")
-              .append(TimeConvertUtils.getFormatDate(Calendar.getInstance().getTime(), "mmmm dd, yyyy", locale));
-        fromTo = buffer.toString();
-      }
-    }
-
-    public String getFromTo() {
-      return fromTo;
-    }
-
-    public String getPeriodType() {
-      return periodType;
-    }
-
-    public String getPluginId() {
-      return pluginId;
-    }
-
-    public Locale getLocale() {
-      return locale;
-    }
-
-    public String getFirstName() {
-      return firstName;
-    }
-
-    public String getPortalName() {
-      return portalName;
-    }
-
-    public String getPortalHome() {
-      return portalHome;
-    }
-
-    public String getSendTo() {
-      return sendTo;
-    }
-
-    public String getFooterLink() {
-      return footerLink;
-    }
-
   }
   
 }

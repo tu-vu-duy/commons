@@ -16,27 +16,39 @@
  */
 package org.exoplatform.commons.notification.impl.service;
 
+import java.io.StringWriter;
+import java.io.Writer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.exoplatform.commons.api.notification.NotificationContext;
 import org.exoplatform.commons.api.notification.model.MessageInfo;
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.model.UserSetting;
 import org.exoplatform.commons.api.notification.node.NTFInforkey;
+import org.exoplatform.commons.api.notification.node.PluginNode;
 import org.exoplatform.commons.api.notification.node.TreeNode;
+import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugin;
+import org.exoplatform.commons.api.notification.plugin.NotificationPluginUtils;
 import org.exoplatform.commons.api.notification.service.QueueMessage;
 import org.exoplatform.commons.api.notification.service.listener.NTFEvent;
+import org.exoplatform.commons.api.notification.service.setting.PluginContainer;
 import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
 import org.exoplatform.commons.api.notification.service.setting.UserSettingService;
 import org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage;
 import org.exoplatform.commons.api.notification.service.template.DigestorService;
+import org.exoplatform.commons.api.notification.service.template.TemplateContext;
 import org.exoplatform.commons.notification.NotificationConfiguration;
 import org.exoplatform.commons.notification.NotificationContextFactory;
+import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.notification.impl.service.storage.ExtendedDataStorageImpl;
 import org.exoplatform.commons.notification.impl.service.storage.NotificationDataStorageImpl;
+import org.exoplatform.commons.notification.impl.service.template.DigestInfo;
+import org.exoplatform.commons.notification.template.TemplateUtils;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
@@ -44,12 +56,15 @@ import org.exoplatform.services.mail.MailService;
 
 public class ExtendedNotificationService extends NotificationServiceImpl {
   private static final Log         LOG              = ExoLogger.getLogger(ExtendedNotificationService.class);
+  private static PluginContainer containerService_;
   public ExtendedNotificationService(NotificationConfiguration configuration,
+                                     PluginContainer containerService,
                                      NotificationDataStorage storage,
                                      PluginSettingService settingService,
                                      UserSettingService userService,
                                      MailService mailService) {
     super(configuration, storage, settingService, userService, mailService);
+    containerService_ = containerService;
   }
   
   @Override
@@ -67,9 +82,14 @@ public class ExtendedNotificationService extends NotificationServiceImpl {
         return;
       }
 
-      Map<String, NTFInforkey> inforKeyMap = new HashMap<String, NTFInforkey>(); 
+      Map<String, List<NTFInforkey>> inforKeyMap = new HashMap<String, List<NTFInforkey>>(); 
+      List<NTFInforkey> infoByPlugin;
       for (NTFInforkey ntfInforkey : inforKeys) {
-        inforKeyMap.put(ntfInforkey.getPluginId(), ntfInforkey);
+        if ((infoByPlugin = inforKeyMap.get(ntfInforkey.getPluginId())) == null) {
+          infoByPlugin = new ArrayList<NTFInforkey>();
+          inforKeyMap.put(ntfInforkey.getPluginId(), infoByPlugin);
+        }
+        infoByPlugin.add(ntfInforkey);
       }
       
       // process for users used setting
@@ -97,16 +117,16 @@ public class ExtendedNotificationService extends NotificationServiceImpl {
         send(inforKeyMap, digest, usersDefaultSettings, defaultSetting);
         offset += limit;
       }
+      LOG.debug("Time to run process users used default settings: " + (System.currentTimeMillis() - startTime) + "ms.");
     } finally {
       //
       dataStorage.resetParentNodeMap();
       processEvents();
     }
 
-    LOG.debug("Time to run process users used default settings: " + (System.currentTimeMillis() - startTime) + "ms.");
   }
   
-  private void send(Map<String, NTFInforkey> inforKeyMap, DigestorService digest,
+  private void send(Map<String, List<NTFInforkey>> inforKeyMap, DigestorService digest,
                       List<UserSetting> userSettings, UserSetting defaultSetting) throws Exception {
     final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
 
@@ -122,12 +142,14 @@ public class ExtendedNotificationService extends NotificationServiceImpl {
       treeNode.intPluginNodes(pluginIds);
       //
       for (String pluginId : pluginIds) {
-        NTFInforkey infoUUID = inforKeyMap.get(pluginId);
-        if(infoUUID != null) {
-          if(isAdd(infoUUID, isWeekly, userSetting.getUserId())) {
-            treeNode.add(new NotificationKey(pluginId), infoUUID);
-            //
-            addEvent(NTFEvent.createNTFEvent(treeNode.getUserName(), new NTFInforkey(infoUUID.getUUID()), isWeekly));
+        List<NTFInforkey> ntfInforkeys = inforKeyMap.get(pluginId);
+        if (ntfInforkeys != null) {
+          for (NTFInforkey ntfInforkey : ntfInforkeys) {
+            if (isAdd(ntfInforkey, isWeekly, userSetting.getUserId())) {
+              treeNode.add(new NotificationKey(pluginId), ntfInforkey);
+              //
+              addEvent(NTFEvent.createNTFEvent(treeNode.getUserName(), new NTFInforkey(ntfInforkey.getUUID()), isWeekly));
+            }
           }
         }
       }
@@ -147,13 +169,243 @@ public class ExtendedNotificationService extends NotificationServiceImpl {
     }
   }
   
-  private boolean isAdd(NTFInforkey infoUUID, boolean isWeekly, String userName) throws Exception {
-    NotificationInfo info = storage.get(infoUUID.getUUID());
+  private boolean isAdd(NTFInforkey inforkey, boolean isWeekly, String userName) throws Exception {
+    NotificationInfo info = storage.get(inforkey.getUUID());
     List<String> users = Arrays.asList((isWeekly) ? info.getSendToWeekly() : info.getSendToDaily());
     if (users.contains(userName) || users.contains(NotificationInfo.FOR_ALL_USER)) {
       return true;
     }
     return false;
   }
+  
+
+/**
+* New APIs 
+**/
+  
+  /**
+   * @throws Exception
+   */
+  public void processDigests() throws Exception {
+    Map<String, ResultDigests> results = new HashMap<String, ResultDigests>();
+    ExtendedDataStorageImpl extDataStorage = CommonsUtils.getService(ExtendedDataStorageImpl.class);
+    UserSetting defaultSetting = getDefaultUserSetting(settingService.getActivePluginIds());
+    for (String pluginId : settingService.getActivePluginIds()) {
+      try {
+        PluginNode pluginNode = extDataStorage.getPluginNotificationInfos(pluginId);
+        // process for users used setting
+        long startTime = System.currentTimeMillis();
+        processListUser(results, pluginNode, null);
+        LOG.debug("Time to run process users have settings: " + (System.currentTimeMillis() - startTime) + "ms.");
+
+        // process for users used default setting
+        startTime = System.currentTimeMillis();
+        processListUser(results, pluginNode, defaultSetting);
+        LOG.debug("Time to run process users used default settings: " + (System.currentTimeMillis() - startTime) + "ms.");
+
+      } catch (Exception e) {
+        LOG.warn("Failed to process notification of plugin " + pluginId);
+        LOG.debug(e.getMessage(), e);
+      } finally {
+        processEvents();
+      }
+    }
+    //
+    for (String userId : results.keySet()) {
+      MessageInfo messageInfo = buildMessageInfo(results.get(userId));
+      if (messageInfo != null) {
+        CommonsUtils.getService(QueueMessage.class).put(messageInfo);
+      }
+    }
+    
+  }
+  
+  private MessageInfo buildMessageInfo(ResultDigests digests) throws Exception {
+    Writer writer = new StringWriter();
+    if (digests.getDigestSize() == 0) {
+      return null;
+    } else if (digests.getDigestSize() == 1) {
+      writer.append("<ul style=\"margin: 0 0  40px -13px; list-style-type: none; padding-left: 0; color: #2F5E92; \">");
+    } else {
+      writer.append("<ul style=\"margin: 0 0  40px; padding-left: 0; color: #2F5E92; list-style-position: outside;  list-style: disc; \">");
+    }
+    //
+    writer.append(digests.toString());
+    
+    writer.append("</ul>");
+
+    UserSetting userSetting = userService.get(digests.getUserId());
+    DigestInfo digestInfo = new DigestInfo(configuration, userSetting);
+
+    TemplateContext ctx = new TemplateContext(digestInfo.getPluginId(), digestInfo.getLocale().getLanguage());
+
+    ctx.put("FIRSTNAME", digestInfo.getFirstName());
+    ctx.put("PORTAL_NAME", digestInfo.getPortalName());
+    ctx.put("PORTAL_HOME", digestInfo.getPortalHome());
+    ctx.put("PERIOD", digestInfo.getPeriodType());
+    ctx.put("FROM_TO", digestInfo.getFromTo());
+    String subject = TemplateUtils.processSubject(ctx);
+    
+    ctx.put("FOOTER_LINK", digestInfo.getFooterLink());
+    ctx.put("DIGEST_MESSAGES_LIST", writer.toString());
+
+    String body = TemplateUtils.processGroovy(ctx);
+    //
+    MessageInfo messageInfo = new MessageInfo();
+    return messageInfo.from(NotificationPluginUtils.getFrom(null)).subject(subject)
+               .body(body).to(digestInfo.getSendTo()).end();
+  }
+  
+  private void processListUser(Map<String, ResultDigests> results, PluginNode pluginNode, UserSetting defaultSetting) throws Exception {
+    int limit = 100;
+    int offset = 0;
+    List<UserSetting> userSettings;
+    boolean isDefaultSetting = (defaultSetting != null);
+    while (true) {
+      if(isDefaultSetting) {
+        userSettings = userService.getDefaultDaily(offset, limit);
+      } else {
+        userSettings = userService.getDaily(offset, limit);
+      }
+      if (userSettings.size() == 0) {
+        break;
+      }
+      //
+      for (UserSetting userSetting : userSettings) {
+        if (isDefaultSetting) {
+          userSetting = defaultSetting.clone()
+                                      .setUserId(userSetting.getUserId())
+                                      .setLastUpdateTime(userSetting.getLastUpdateTime());
+        }
+        ResultDigests resultDigests = results.get(userSetting.getUserId());
+        if (resultDigests == null) {
+          resultDigests = new ResultDigests(userSetting.getUserId());
+          results.put(userSetting.getUserId(), resultDigests);
+        }
+        processDigestsByUser(pluginNode, userSetting, resultDigests);
+      }
+      offset += limit;
+    }
+  }
+  
+  private void processDigestsByUser(PluginNode pluginNode, UserSetting userSetting, ResultDigests resultDigests) throws Exception {
+    List<NTFInforkey> inforkeys = getByUser(pluginNode, userSetting);
+    if (inforkeys.size() == 0) {
+      return;
+    }
+    NotificationContext nCtx = NotificationContextImpl.cloneInstance();
+    nCtx.append(NotificationPluginUtils.SENDTO, userSetting.getUserId());
+
+    AbstractNotificationPlugin plugin = containerService_.getPlugin(pluginNode.getKey());
+    nCtx.setNotificationInfos(inforkeys);
+    plugin.buildDigest(nCtx, resultDigests.getWriter());
+    //
+    processRemoveItem(pluginNode);
+  }
+  
+  private boolean isValid(PluginNode pluginNode, UserSetting userSetting) {
+    List<String> activePlugins = (configuration.isSendWeekly()) ? userSetting.getWeeklyProviders() : 
+                                                                  userSetting.getDailyProviders();
+    return activePlugins.contains(pluginNode.getKey().getId());
+  }
+  
+  public List<NTFInforkey> getByUser(PluginNode pluginNode, UserSetting userSetting) throws Exception {
+    List<NTFInforkey> inforkeys = new ArrayList<NTFInforkey>();
+    if (isValid(pluginNode, userSetting)) {
+      List<NTFInforkey> messages = pluginNode.getNotificationInfos();
+      for (NTFInforkey inforkey : messages) {
+        if (isAdd(inforkey, pluginNode.isWeekly(), userSetting.getUserId())) {
+          inforkeys.add(inforkey);
+        }
+      }
+    }
+    //
+    return inforkeys;
+  }
+  
+  
+  
+  private void processRemoveItem(PluginNode pluginNode) throws Exception {
+    List<NTFInforkey> messages = pluginNode.getNotificationInfos();
+    boolean isWeekly = configuration.isSendWeekly();
+    for (NTFInforkey ntfInforkey : messages) {
+      NotificationInfo info = storage.get(ntfInforkey.getUUID());
+      String[] sendTos = (isWeekly) ? info.getSendToWeekly() : info.getSendToDaily();
+      if (sendTos.length == 1 && !sendTos[0].equals(NotificationInfo.FOR_ALL_USER)) {
+        pluginNode.remove(ntfInforkey);
+      }
+    }
+  }
+  
+  
+  public class ResultDigests {
+    private Writer       writer;
+    private int size = 0;
+    private final String userId;
+
+    public ResultDigests(String userId) {
+      writer = new StringWriter();
+      this.userId = userId;
+    }
+
+    public Writer getWriter() {
+      ++size;
+      return writer;
+    }
+
+    public String getUserId() {
+      return userId;
+    }
+
+    public int getDigestSize() {
+      return size;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (super.equals(o)) {
+        return true;
+      }
+
+      if (userId.equals(((ResultDigests) o).getUserId())) {
+        return true;
+      }
+      return false;
+    }
+    @Override
+    public int hashCode() {
+      int c = super.hashCode();
+      return c + 21 * userId.hashCode();
+    }
+    
+    @Override
+    public String toString() {
+      return writer.toString();
+    }
+  }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
 }

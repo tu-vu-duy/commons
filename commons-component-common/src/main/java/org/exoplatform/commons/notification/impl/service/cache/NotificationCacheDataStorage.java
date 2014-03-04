@@ -43,7 +43,7 @@ public class NotificationCacheDataStorage implements NotificationDataStorage {
     Loader<NotificationCacheKey, NotificationInfo, NotificationDataStorageImpl> loader = new Loader<NotificationCacheKey, NotificationInfo, NotificationDataStorageImpl>() {
       @Override
       public NotificationInfo retrieve(NotificationDataStorageImpl service, NotificationCacheKey key) throws Exception {
-        return service.get(key.getKey().getUUID());
+        return service.get(key.getInfoKey().getUUID());
       }
     };
     futureExoCache = new FutureExoCache<NotificationCacheKey, NotificationInfo, NotificationDataStorageImpl>(loader, notificationCache);

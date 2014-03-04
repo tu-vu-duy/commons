@@ -57,32 +57,23 @@ public class NTFListenerImpl extends NTFListener {
     try {
       localLock.lock();
       List<NTFEvent> evts = events.get(eventType.toString());
-      List<NotificationInfo> notifications = new ArrayList<NotificationInfo>();
       for (NTFEvent event : evts) {
-        String userName = event.getSource();
         String uuid = event.getData().getUUID();
         NotificationInfo info = storage.get(uuid);
         if (NTFEvent.NAME.DAILY.equals(eventType)) {
-          if (info.isSendAll()) {
+          if (info.getSendToWeekly().length == 0) {
+            storage.remove(info.getId());
+          } else {
             info.setSendToDaily(new String[] {});
-          } else {
-            info.removeOnSendToDaily(userName);
+            storage.save(info);
           }
         } else {
-          if (info.isSendAll()) {
+          if (info.getSendToDaily().length == 0) {
+            storage.remove(info.getId());
+          } else {
             info.setSendToWeekly(new String[] {});
-          } else {
-            info.removeOnSendToWeekly(userName);
+            storage.save(info);
           }
-        }
-        notifications.add(info);
-      }
-
-      for (NotificationInfo info : notifications) {
-        if (info.getSendToDaily().length == 0 && info.getSendToWeekly().length == 0) {
-          storage.remove(info.getId());
-        } else {
-          storage.save(info);
         }
       }
 
@@ -94,4 +85,5 @@ public class NTFListenerImpl extends NTFListener {
       localLock.unlock();
     }
   }
+  
 }

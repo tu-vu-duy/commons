@@ -150,6 +150,42 @@
             </field>
           </object>
         </object-param>
+        <object-param>
+          <name>cache.config.NotificationDataStorage</name>
+          <description>The JBoss Cache configuration for the notification information</description>
+          <object type="org.exoplatform.services.cache.ExoCacheConfig">
+            <field name="name">
+              <string>commons.notification.user.SettingData</string>
+            </field>
+            <field name="maxSize">
+              <int>${cache.exo.commons.notification.UserSettingData.Capacity:50000}</int>
+            </field>
+            <field name="liveTime">
+              <long>${cache.exo.commons.notification.UserSettingData.TimeToLive:600000}</long>
+            </field>
+            <field name="implementation">
+              <string>org.exoplatform.services.cache.concurrent.ConcurrentFIFOExoCache</string>
+            </field>
+          </object>
+        </object-param>
+        <object-param>
+          <name>cache.config.NotificationDataStorage</name>
+          <description>The JBoss Cache configuration for the notification information</description>
+          <object type="org.exoplatform.services.cache.ExoCacheConfig">
+            <field name="name">
+              <string>commons.notification.user.SettingList</string>
+            </field>
+            <field name="maxSize">
+              <int>${cache.exo.commons.notification.UserSettingList.Capacity:1000}</int>
+            </field>
+            <field name="liveTime">
+              <long>${cache.exo.commons.notification.UserSettingList.TimeToLive:600000}</long>
+            </field>
+            <field name="implementation">
+              <string>org.exoplatform.services.cache.concurrent.ConcurrentFIFOExoCache</string>
+            </field>
+          </object>
+        </object-param>
       </init-params>
     </component-plugin>
     <component-plugin profiles="cluster">
@@ -188,6 +224,42 @@
             </field>
             <field name="maxNodes">
               <int>${cache.exo.commons.NotificationDataStorage.MaxNodes:5000}</int>
+            </field>
+            <field name="distributed">
+              <boolean>true</boolean>
+            </field>
+          </object>
+        </object-param>
+        <object-param>
+          <name>cache.config.NotificationDataStorage</name>
+          <description>The JBoss Cache configuration for the notification information</description>
+          <object type="org.exoplatform.services.cache.impl.jboss.ea.EAExoCacheConfig">
+            <field name="name">
+              <string>commons.notification.user.SettingData</string>
+            </field>
+            <field name="expirationTimeout">
+              <long>${cache.exo.commons.notification.UserSettingData.ExpirationTimeout:600000}</long>
+            </field>
+            <field name="maxNodes">
+              <int>${cache.exo.commons.notification.UserSettingData.MaxNodes:5000}</int>
+            </field>
+            <field name="distributed">
+              <boolean>true</boolean>
+            </field>
+          </object>
+        </object-param>
+        <object-param>
+          <name>cache.config.NotificationDataStorage</name>
+          <description>The JBoss Cache configuration for the notification information</description>
+          <object type="org.exoplatform.services.cache.impl.jboss.ea.EAExoCacheConfig">
+            <field name="name">
+              <string>commons.notification.user.SettingList</string>
+            </field>
+            <field name="expirationTimeout">
+              <long>${cache.exo.commons.notification.UserSettingList.ExpirationTimeout:600000}</long>
+            </field>
+            <field name="maxNodes">
+              <int>${cache.exo.commons.notification.UserSettingList.MaxNodes:5000}</int>
             </field>
             <field name="distributed">
               <boolean>true</boolean>
