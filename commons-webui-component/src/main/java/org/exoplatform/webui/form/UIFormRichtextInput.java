@@ -1,6 +1,9 @@
 package org.exoplatform.webui.form;
 
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
 import org.exoplatform.webui.application.WebuiRequestContext;
 
 /**
@@ -33,6 +36,8 @@ public class UIFormRichtextInput extends UIFormInputBase<String> {
   private String css;
   
   private boolean isPasteAsPlainText = false;
+
+  private boolean isIgnoreParserHTML = false;
 
   public UIFormRichtextInput(String name, String bindingField, String value) {
     super(name, bindingField, String.class);
@@ -89,19 +94,29 @@ public class UIFormRichtextInput extends UIFormInputBase<String> {
   public void setToolbar(String toolbar) {
     this.toolbar = toolbar;
   }
-  
+
   public void setEnterMode(String enterMode) {
-  	this.enterMode = enterMode;
+    this.enterMode = enterMode;
   }
-  
-  public void setIsPasteAsPlainText(boolean isPasteAsPlainText) {
-	  this.isPasteAsPlainText = isPasteAsPlainText;
+
+  public UIFormRichtextInput setIsPasteAsPlainText(boolean isPasteAsPlainText) {
+    this.isPasteAsPlainText = isPasteAsPlainText;
+    return this;
   }
-  
+
   public boolean getIsPasteAsPlainText() {
-	  return this.isPasteAsPlainText;
+    return this.isPasteAsPlainText;
   }
-  
+
+  public boolean isIgnoreParserHTML() {
+    return isIgnoreParserHTML;
+  }
+
+  public UIFormRichtextInput setIgnoreParserHTML(boolean isIgnoreParserHTML) {
+    this.isIgnoreParserHTML = isIgnoreParserHTML;
+    return this;
+  }
+
   public void setCss(String css) {
 	  this.css = css;
   }
@@ -109,52 +124,70 @@ public class UIFormRichtextInput extends UIFormInputBase<String> {
   public String getCss() {
 	  return css;
   }
-
-  public void processRender(WebuiRequestContext context) throws Exception {
-
+  
+  private String buildEditorLayout() throws Exception {
     if (toolbar == null) toolbar = BASIC_TOOLBAR;
     if (width == null) width = "98%";
     if (height == null) height = "'200px'";
     if (enterMode == null) enterMode = "1";
-    if(css == null) css = "'/CommonsResources/ckeditor/contents.css'";
-     
+    if (css == null) css = "\"/CommonsResources/ckeditor/contents.css\"";
 
     StringBuffer buffer = new StringBuffer();
-    buffer.append("<div>");
-    buffer.append("<span style='float:left; width:"+width+";'>");
-    if (value_!=null) {
-      buffer.append("<textarea id='" + name + "' name='" + name + "'>" + value_ + "</textarea>\n");
-    }else {
-      buffer.append("<textarea id='" + name + "' name='" + name + "'></textarea>\n");
+    buffer.append("<div class=\"clearfix\">");
+    buffer.append("  <span style=\"float:left; width:").append(width).append(";\">");
+    //
+    String initValue = "";
+    if (value_ != null) {
+      initValue = (isIgnoreParserHTML()) ? value_.replaceAll("&lt;", "&_LT;") : value_;
+      
+      buffer.append("<div style=\"display:none\" id=\"content").append(name).append("\">")
+            .append(URLEncoder.encode(value_, "UTF-8")).append("</div>");
     }
-    
-    buffer.append("<script type='text/javascript'>\n");
-    buffer.append("    require(['/CommonsResources/ckeditor/ckeditor.js'], function() {");
-    buffer.append("  //<![CDATA[\n");
-    buffer.append("    var instance = CKEDITOR.instances['" + name + "']; if (instance) { CKEDITOR.remove(instance); instance = null;}\n");
-    if(isPasteAsPlainText)
-    	buffer.append("    CKEDITOR.replace('" + name + "', {toolbar:'" + toolbar + "', height:"
-    		+ height + ", forcePasteAsPlainText: true, contentsCss:" + css + ", enterMode:" + enterMode + ", shiftEnterMode:" + enterMode + "});\n");
-    else
-    	buffer.append("    CKEDITOR.replace('" + name + "', {toolbar:'" + toolbar + "', height:"
-        	+ height + ", contentsCss:" + css + ", enterMode:" + enterMode + ", shiftEnterMode:" + enterMode + "});\n");
-    buffer.append("    instance = CKEDITOR.instances['" + name + "']; instance.on( 'change', function(e) { document.getElementById('"+name+"').value = instance.getData(); }); \n");
-    buffer.append("       });");
-    buffer.append("  //]]>\n");
+
+    buffer.append("  <textarea id=\"").append(name).append("\" name=\"").append(name).append("\">")
+          .append(initValue).append("</textarea>\n");
+
+    buffer.append("<script type=\"text/javascript\">\n")
+          .append("    require(['/CommonsResources/ckeditor/ckeditor.js'], function() {")
+          .append("  //<![CDATA[\n")
+          .append("    var instance = CKEDITOR.instances['").append(name).append("'];")
+          .append("    if (instance) { CKEDITOR.remove(instance); instance = null;}\n");
+
+    buffer.append("    CKEDITOR.replace('").append(name).append("', {toolbar:'").append(toolbar).append("', height:")
+          .append(height).append(", contentsCss:").append(css).append(", enterMode:").append(enterMode)
+          .append((isPasteAsPlainText) ? ", forcePasteAsPlainText: true" : "")
+          .append(", shiftEnterMode:").append(enterMode + "});\n");
+
+    buffer.append((isIgnoreParserHTML()) ? "CKEDITOR.ignoreParserHTML=true;" : "");
+
+    buffer.append("    instance = CKEDITOR.instances['" + name + "'];")
+          .append("    instance.on( 'change', function(e) { document.getElementById('").append(name).append("').value = instance.getData(); });\n")
+          .append("  //]]>\n")
+          .append("});");
+
     buffer.append("</script>\n");
-    buffer.append("</span>");
+
+    buffer.append("  </span>");
+
     if (isMandatory()) {
-      buffer.append("<span style='float:left'> &nbsp;*</span>");
+      buffer.append("  <span style=\"float:left\"> &nbsp;*</span>");
     }
-    
-    buffer.append("</div>");    
-    context.getWriter().write(buffer.toString());
+    buffer.append("</div>");
+    //
+    return buffer.toString();
+  }
+
+  public void processRender(WebuiRequestContext context) throws Exception {
+    //
+    context.getWriter().write(buildEditorLayout());
   }
 
   public void decode(Object input, WebuiRequestContext context) {
-    value_ = (String)input;
-    if (value_ != null && value_.length() == 0)
-       value_ = null;
+    value_ = (String) input;
+    if (value_ != null && value_.length() == 0) {
+      value_ = null;
+    }
+    value_ = (value_ != null && isIgnoreParserHTML()) ? value_.replaceAll("&lt;", "&_LT;").replaceAll("&nbsp;", " ") : value_;
   }
 
 }
