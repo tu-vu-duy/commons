@@ -43,37 +43,41 @@ public interface UserSettingService {
    * 
    * @param offset The start point from which the user settings are got.
    * @param limit The limited number of user settings.
+   * @param isSendWeekly The status to get user setting on weekly or daily
    * @return The list of user settings.
    */
-  List<UserSetting> getDaily(int offset, int limit);
+  List<UserSetting> getDigest(int offset, int limit, boolean isSendWeekly);
 
   /**
-   * Gets a number of users registering for daily notifications.
+   * Gets a number of users registering for digest notifications.
+   * 
    * @return The number of users.
    */
-  long getNumberOfDaily();
+  long getNumberOfDigest();
   
   /**
-   * Gets all settings of users registering for default daily notifications.
+   * Gets all settings of users registering for default digest notifications.
+   * 
    * @param offset The start point from which the user settings are got.
    * @param limit The limited number of user settings.
+   * @param isSendWeekly The status to get user setting on weekly or daily
    * @return The list of user settings.
    */
-  List<UserSetting> getDefaultDaily(int offset, int limit);
+  List<UserSetting> getDefaultDigest(int offset, int limit, boolean isSendWeekly);
   
   /**
    * Gets a number of users used default configuration notifications.
    * @return The number of users.
    */
-  long getNumberOfDefaultDaily();
+  long getNumberOfDefaultDigest();
   
   /**
-   * Gets all Ids of users registering for notifications by a given plugin.
+   * Gets all Ids of users registering instantly for notifications by a given plugin.
    * 
    * @param pluginId Id of the plugin.
    * @return The remote Ids of users.
    */
-  List<String> getUserSettingByPlugin(String pluginId);
+  List<String> getInstantly(String pluginId);
   
   /**
    * Adds the default settings to a user's node.
@@ -88,4 +92,12 @@ public interface UserSettingService {
    * @param users The list of users.
    */
   void addMixin(User[] users);
+  
+  /**
+   * To check user has setting or not
+   * 
+   * @param userId
+   * @return
+   */
+  boolean hasSetting(String userId);
 }

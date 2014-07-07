@@ -17,7 +17,6 @@
 package org.exoplatform.commons.notification.job;
 
 import org.exoplatform.commons.api.notification.service.storage.NotificationService;
-import org.exoplatform.commons.notification.NotificationConfiguration;
 import org.exoplatform.commons.notification.job.mbeans.WeeklyService;
 import org.exoplatform.commons.utils.CommonsUtils;
 
@@ -27,8 +26,7 @@ public class NotificationWeeklyJob extends NotificationJob {
   protected void processSendNotification() throws Exception {
     if (WeeklyService.isStarted() == false) {
       LOG.info("Starting run job to send weekly email notification ... ");
-      CommonsUtils.getService(NotificationConfiguration.class).setSendWeekly(true);
-      CommonsUtils.getService(NotificationService.class).processDigest();
+      CommonsUtils.getService(NotificationService.class).processDigest(true);
     }
   }
   

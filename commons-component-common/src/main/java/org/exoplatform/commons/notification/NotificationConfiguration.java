@@ -26,7 +26,7 @@ public class NotificationConfiguration implements Serializable {
 
   private String            workspace        = AbstractService.DEFAULT_WORKSPACE_NAME;
 
-  private boolean          isSendWeekly     = false;
+  private Integer jobCurrentDay = null;
 
   public NotificationConfiguration(InitParams params) {
     this.workspace = NotificationUtils.getValueParam(params, AbstractService.WORKSPACE_PARAM, AbstractService.DEFAULT_WORKSPACE_NAME);
@@ -37,17 +37,19 @@ public class NotificationConfiguration implements Serializable {
   }
 
   /**
-   * @return the isSendWeekly
+   * @return the jobCurrentDay
    */
-  public boolean isSendWeekly() {
-    return isSendWeekly;
+  public Integer getJobCurrentDay() {
+    return jobCurrentDay;
   }
-
+  
   /**
-   * @param isSendWeekly the isSendWeekly to set
+   * @param jobCurrentDay the currentDay to set
+   * + Only set value when start job digest daily
+   * + After sent daily it must be set value is null
    */
-  public void setSendWeekly(boolean isSendWeekly) {
-    this.isSendWeekly = isSendWeekly;
+  public void setJobCurrentDay(Integer jobCurrentDay) {
+    this.jobCurrentDay = jobCurrentDay;
   }
 
   /**

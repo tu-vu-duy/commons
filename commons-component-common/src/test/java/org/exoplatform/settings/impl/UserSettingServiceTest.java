@@ -1,7 +1,6 @@
 package org.exoplatform.settings.impl;
 
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -10,9 +9,9 @@ import java.util.concurrent.ThreadFactory;
 import javax.jcr.Node;
 
 import org.exoplatform.commons.api.notification.model.UserSetting;
+import org.exoplatform.commons.api.notification.service.setting.UserSettingService;
 import org.exoplatform.commons.api.notification.service.storage.NotificationService;
-import org.exoplatform.commons.notification.impl.setting.UserSettingServiceImpl;
-import org.exoplatform.commons.testing.BaseCommonsTestCase;
+import org.exoplatform.commons.notification.AsbtractBaseNotificationTestCase;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.ListAccess;
 import org.exoplatform.services.organization.OrganizationService;
@@ -21,8 +20,8 @@ import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class UserSettingServiceTest extends BaseCommonsTestCase {
-  private UserSettingServiceImpl userSettingService;
+public class UserSettingServiceTest extends AsbtractBaseNotificationTestCase {
+  private UserSettingService userSettingService;
   private ExecutorService executor;
   
   public UserSettingServiceTest() {
@@ -32,8 +31,7 @@ public class UserSettingServiceTest extends BaseCommonsTestCase {
   public void setUp() throws Exception {
     super.setUp();
     //
-    userSettingService = getService(UserSettingServiceImpl.class);
-    addCreateDateForUser();
+    userSettingService = getService(UserSettingService.class);
     // init setting home
     initSettingHome();
     //
@@ -48,21 +46,21 @@ public class UserSettingServiceTest extends BaseCommonsTestCase {
 
   @Override
   protected void tearDown() throws Exception {
-    session.logout();
+    super.tearDown();
   }
 
   public void testGetDefautSetting() throws Exception {
     // before upgrade
-    List<UserSetting> list = userSettingService.getDefaultDaily(0, 0);
+    List<UserSetting> list = userSettingService.getDefaultDigest(0, 0, false);
     assertEquals(0, list.size());
     // run upgrade
     runUpgrade();
     // after upgrade
-    list = userSettingService.getDefaultDaily(0, 0);
+    list = userSettingService.getDefaultDigest(0, 0, false);
     assertEquals(10, list.size());
   }
 
-  public void testGetUsersSetting() throws Exception {
+  public void testGetgetInstantly() throws Exception {
     runUpgrade();
     //
     userSettingService.save(createUserSetting("root", Arrays.asList("1,2"), Arrays.asList("3,4"), Arrays.asList("5,6")));
@@ -70,13 +68,13 @@ public class UserSettingServiceTest extends BaseCommonsTestCase {
     userSettingService.save(createUserSetting("mary", Arrays.asList("32,5"), Arrays.asList("4,6"), Arrays.asList("1,9")));
     userSettingService.save(createUserSetting("demo", Arrays.asList("2"), Arrays.asList("3,9"), Arrays.asList("2,7")));
     //
-    List<String> list = userSettingService.getUserSettingByPlugin("2");
+    List<String> list = userSettingService.getInstantly("2");
     assertEquals(2, list.size());
   }
 
   private void runUpgrade() throws Exception {
     // run upgrade by run daily
-    getService(NotificationService.class).processDigest();
+    getService(NotificationService.class).processDigest(false);
     //
     initModifiedDate();
   }
@@ -100,13 +98,6 @@ public class UserSettingServiceTest extends BaseCommonsTestCase {
     }
   }
   
-  private void addLastUpdateTime(String userId) throws Exception {
-    Node rootNode = session.getRootNode().getNode("settings").getNode("user").getNode(userId);
-    rootNode.addMixin("exo:datetime");
-    rootNode.setProperty("exo:lastModifiedDate", Calendar.getInstance());
-    session.save();
-  }
-  
   private void initModifiedDate() throws Exception {
     OrganizationService organizationService = CommonsUtils.getService(OrganizationService.class);
     ListAccess<User> list = organizationService.getUserHandler().findAllUsers();
@@ -119,20 +110,9 @@ public class UserSettingServiceTest extends BaseCommonsTestCase {
     }
   }
 
-  private void addCreateDateForUser() throws Exception {
-    OrganizationService organizationService = CommonsUtils.getService(OrganizationService.class);
-    ListAccess<User> list = organizationService.getUserHandler().findAllUsers();
-    //
-    User[] users = list.load(0, list.getSize());
-    for (int i = 0; i < users.length; i++) {
-      if (users[i] != null && users[i].getUserName() != null) {
-        users[i].setCreatedDate(Calendar.getInstance().getTime());
-      }
-    }
-  }
-  
   public void testAddMixingMultiThreads() throws Exception {
-    for (int i = 0; i < 500; i++) {
+    for (int i = 0; i < 50; i++) {
+      Thread.sleep(5);
       executor.execute(new Runnable() {
         @Override
         public void run() {

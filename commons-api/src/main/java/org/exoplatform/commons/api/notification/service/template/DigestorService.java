@@ -31,7 +31,9 @@ public interface DigestorService {
    * 
    * @param notificationData The list of notification messages.
    * @param userSetting The user's notification settings.
+   * @param isSendWeekly The status to build digest message of weekly or daily .
    * @return The message.
    */
-  public MessageInfo buildMessage(Map<NotificationKey, List<NotificationInfo>> notificationData, UserSetting userSetting);
+  public MessageInfo buildMessage(Map<NotificationKey, List<NotificationInfo>> notificationData,
+                                  UserSetting userSetting, boolean isSendWeekly);
 }

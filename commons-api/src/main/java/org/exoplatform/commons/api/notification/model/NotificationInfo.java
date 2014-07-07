@@ -18,6 +18,8 @@ package org.exoplatform.commons.api.notification.model;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,11 +52,14 @@ public class NotificationInfo {
   private String[]            sendToDaily;
 
   private String[]            sendToWeekly;
+  
+  private Calendar dateCreated;
 
   public NotificationInfo() {
     this.id = PREFIX_ID + IdGenerator.generate();
     this.sendToDaily = new String[] { "" };
     this.sendToWeekly = new String[] { "" };
+    this.dateCreated = GregorianCalendar.getInstance();
   }
   
   public static NotificationInfo instance() {
@@ -276,6 +281,21 @@ public class NotificationInfo {
     return this;
   }
   
+  /**
+   * @return
+   */
+  public Calendar getDateCreated() {
+    return dateCreated;
+  }
+
+  /**
+   * @param dateCreated The date to set created date
+   */
+  public NotificationInfo setDateCreated(Calendar dateCreated) {
+    this.dateCreated = dateCreated;
+    return this;
+  }
+
   /**
    * @param userId the userId to remove into sendToWeekly
    */

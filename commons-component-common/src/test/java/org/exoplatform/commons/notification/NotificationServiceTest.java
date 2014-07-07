@@ -14,11 +14,13 @@ import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.model.UserSetting;
 import org.exoplatform.commons.api.notification.model.UserSetting.FREQUENCY;
+import org.exoplatform.commons.api.notification.service.NotificationCompletionService;
+import org.exoplatform.commons.api.notification.service.setting.UserSettingService;
 import org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage;
 import org.exoplatform.commons.api.notification.service.storage.NotificationService;
-import org.exoplatform.commons.testing.BaseCommonsTestCase;
+import org.exoplatform.commons.notification.impl.AbstractService;
 
-public class NotificationServiceTest extends BaseCommonsTestCase {
+public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
   
   private NotificationService       notificationService;
   private NotificationDataStorage   notificationDataStorage;
@@ -28,25 +30,45 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
   public void setUp() throws Exception {
     super.setUp();
     notificationService = getService(NotificationService.class);
-    configuration = getService(NotificationConfiguration.class);
-    
+    assertNotNull(notificationService);
+
     notificationDataStorage = getService(NotificationDataStorage.class);
+    assertNotNull(notificationDataStorage);
+
+    configuration = getService(NotificationConfiguration.class);
+    assertNotNull(configuration);
+    configuration.setJobCurrentDay(Calendar.getInstance().get(Calendar.DAY_OF_MONTH));
+    //
+    initDefaultHomeNode();
+    getService(NotificationCompletionService.class);
   }
   
   @Override
   public void tearDown() throws Exception {
-    Node homeNode = (Node) session.getItem("/eXoNotification/messageHome");
+    // remove all notification node
+    removeChildNodes("/eXoNotification/messageHome");
+    super.tearDown();
+  }
+
+  private void removeChildNodes(String path) throws Exception {
+    Node homeNode = (Node) session.getItem(path);
     NodeIterator iterator = homeNode.getNodes();
     while (iterator.hasNext()) {
       Node node = (iterator.nextNode());
       node.remove();
     }
     session.save();
-    super.tearDown();
   }
   
   private NotificationInfo saveNotification(String userDaily, String userWeekly) throws Exception {
+    return saveNotification(userDaily, userWeekly, null);
+  }
+
+  private NotificationInfo saveNotification(String userDaily, String userWeekly, Calendar createdDate) throws Exception {
     NotificationInfo notification = NotificationInfo.instance();
+    if (createdDate != null) {
+      notification.setDateCreated(createdDate);
+    }
     Map<String, String> params = new HashMap<String, String>();
     params.put("objectId", "idofobject");
     notification.key("TestPlugin").setSendToDaily(userDaily)
@@ -63,6 +85,9 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     saveNotification("root", "demo");
   }
 
+  /**
+   * @throws Exception
+   */
   public void testSave() throws Exception {
     NotificationInfo notification = saveNotification("root", "demo");
     
@@ -74,13 +99,12 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
   }
   
   public void testNormalGetByUserAndRemoveMessagesSent() throws Exception {
-    configuration.setSendWeekly(false);
     NotificationInfo notification = saveNotification("root", "demo");
     UserSetting userSetting = UserSetting.getInstance();
     userSetting.setUserId("root").addProvider("TestPlugin", FREQUENCY.DAILY);
     userSetting.setActive(true);
     
-    Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(userSetting);
+    Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(userSetting, false);
     
     List<NotificationInfo> list = map.get(new NotificationKey("TestPlugin"));
     assertEquals(1, list.size());
@@ -92,14 +116,13 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     
     assertEquals(0, notification2.getSendToDaily().length);
     
-    configuration.setSendWeekly(true);
     userSetting.setUserId("demo").addProvider("TestPlugin", FREQUENCY.WEEKLY);
-    map = notificationDataStorage.getByUser(userSetting);
+    map = notificationDataStorage.getByUser(userSetting, true);
     list = map.get(new NotificationKey("TestPlugin"));
     assertEquals(1, list.size());
     
     
-    notificationDataStorage.removeMessageAfterSent();
+    notificationDataStorage.removeMessageAfterSent(true);
     
     notification2 = getNotificationInfoByKeyIdAndParam("TestPlugin", "objectId=idofobject");
     assertNull(notification2);
@@ -116,8 +139,7 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     userSetting.setUserId("root").addProvider("TestPlugin", FREQUENCY.DAILY);
     userSetting.setActive(true);
     // Test send to daily
-    configuration.setSendWeekly(false);
-    Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(userSetting);
+    Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(userSetting, false);
     
     List<NotificationInfo> list = map.get(new NotificationKey("TestPlugin"));
     assertEquals(1, list.size());
@@ -129,20 +151,19 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
 
     assertEquals(NotificationInfo.FOR_ALL_USER, notification2.getSendToDaily()[0]);
     // remove value on property sendToDaily
-    notificationDataStorage.removeMessageAfterSent();
+    notificationDataStorage.removeMessageAfterSent(false);
 
     // after sent, the value on on property sendToDaily will auto removed
     notification2 = getNotificationInfoByKeyIdAndParam("TestPlugin", "objectId=idofobject");
     assertEquals(0, notification2.getSendToDaily().length);
     
     // Test send to weekly
-    configuration.setSendWeekly(true);
     userSetting.setUserId("demo").addProvider("TestPlugin", FREQUENCY.WEEKLY);
-    map = notificationDataStorage.getByUser(userSetting);
+    map = notificationDataStorage.getByUser(userSetting, true);
     list = map.get(new NotificationKey("TestPlugin"));
     assertEquals(1, list.size());
     
-    notificationDataStorage.removeMessageAfterSent();
+    notificationDataStorage.removeMessageAfterSent(true);
     
     notification2 = getNotificationInfoByKeyIdAndParam("TestPlugin", "objectId=idofobject");
     assertNull(notification2);
@@ -150,21 +171,53 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
 
   public void testWithUserNameContainSpecialCharacter() throws Exception {
     String userNameSpecial = "Rabe'e \"AbdelWahabô";
-    NotificationConfiguration configuration = getService(NotificationConfiguration.class);
-    configuration.setSendWeekly(false);
     NotificationInfo notification = saveNotification(userNameSpecial, "demo");
-    getService(NotificationConfiguration.class).setSendWeekly(false);
     //
     UserSetting userSetting = UserSetting.getInstance();
     userSetting.setUserId(userNameSpecial).addProvider("TestPlugin", FREQUENCY.DAILY);
     userSetting.setActive(true);
     //
-    Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(userSetting);
+    Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(userSetting, false);
     List<NotificationInfo> list = map.get(new NotificationKey("TestPlugin"));
     //
     assertEquals(1, list.size());
     assertTrue(list.get(0).equals(notification));
   }
+  
+  public void testRunDigestOfYesterdayOnToday() throws Exception {
+    Calendar cal = Calendar.getInstance();
+    int today = cal.get(Calendar.DAY_OF_MONTH);
+    cal.setTimeInMillis(cal.getTimeInMillis() - 86400000);
+    int yesterday = cal.get(Calendar.DAY_OF_MONTH);
+    // create some notifications has createdDate is today
+    int numberToday = 5;
+    for (int i = 0; i < numberToday; i++) {
+      saveNotification("demo", "");
+    }
+    int numberYesterday = 10;
+    // create some notifications has createdDate is yesterday
+    for (int i = 0; i < numberYesterday; i++) {
+      saveNotification("demo", "", cal);
+    }
+    assertEquals(numberToday, ((Node) session.getItem("/eXoNotification/messageHome/TestPlugin/d" + today)).getNodes().getSize());
+    assertEquals(numberYesterday, ((Node) session.getItem("/eXoNotification/messageHome/TestPlugin/d" + yesterday)).getNodes().getSize());
+    // Save user setting
+    UserSetting userSetting = UserSetting.getInstance();
+    userSetting.setUserId("demo").addProvider("TestPlugin", FREQUENCY.DAILY);
+    userSetting.setActive(true);
+    getService(UserSettingService.class).save(userSetting);
+    addLastUpdateTime("demo");
+    // run daily digest
+    configuration.setJobCurrentDay(null);
+    notificationService.processDigest(yesterday, false);
+    // check data after run digest
+    assertEquals(1, ((Node) session.getItem("/eXoNotification/messageInfoHome")).getNodes().getSize());
+    //
+    assertEquals(0, ((Node) session.getItem("/eXoNotification/messageHome/TestPlugin/d" + yesterday)).getNodes().getSize());
+    //
+    removeChildNodes("/eXoNotification/messageHome/TestPlugin");
+  }
+  
   
   private void addMixin(String msgId) throws Exception {
     Node msgNode = getMessageNodeById(msgId);
@@ -209,6 +262,26 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     Query query = qm.createQuery(sqlQuery.toString(), Query.SQL);
     NodeIterator iter = query.execute().getNodes();
     return (iter.getSize() > 0) ? iter.nextNode() : null;
+  }
+  
+  private void initDefaultHomeNode() throws Exception {
+    // User
+    Node setting = addNode(root, "settings", "stg:settings");
+    addNode(setting, "user", "stg:subcontext");
+    //
+    Node ntfHome = addNode(root, AbstractService.NOTIFICATION_HOME_NODE, AbstractService.NTF_NOTIFICATION);
+    Node msgHome = addNode(ntfHome, AbstractService.MESSAGE_HOME_NODE, AbstractService.NTF_MESSAGE_HOME);
+    msgHome.addMixin(AbstractService.MIX_SUB_MESSAGE_HOME);
+    addNode(ntfHome, AbstractService.MESSAGE_INFO_HOME_NODE, AbstractService.NTF_MESSAGE_INFO_HOME);
+    //
+    session.save();
+  }
+
+  private Node addNode(Node parent, String name, String type) throws Exception {
+    if (parent.hasNode(name)) {
+      return parent.getNode(name);
+    }
+    return parent.addNode(name, type);
   }
 
 }

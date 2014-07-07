@@ -38,15 +38,17 @@ public interface NotificationDataStorage {
    * Gets information of all notifications of a user.
    * 
    * @param userSetting The notification settings of the user.
+   * @param isSendWeekly Is send weekly or daily
    * @return Information of notifications.
    */
-  Map<NotificationKey, List<NotificationInfo>> getByUser(UserSetting userSetting);
+  Map<NotificationKey, List<NotificationInfo>> getByUser(UserSetting userSetting, boolean isSendWeekly);
 
   /**
    * Removes all messages after they have been sent.
    * 
+   * @param isSendWeekly Is send weekly or daily
    * @throws Exception
    */
-  void removeMessageAfterSent() throws Exception;
+  void removeMessageAfterSent(boolean isSendWeekly) throws Exception;
   
 }

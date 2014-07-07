@@ -32,9 +32,19 @@ public interface NotificationService {
   /**
    * Collects information of a digest message and sends it daily or weekly.
    *
+   * @param isSendWeekly
    * @throws Exception
    */
-  void processDigest() throws Exception;
+  void processDigest(boolean isSendWeekly) throws Exception;
+
+  /**
+   * Collects information of a digest message and sends it daily or weekly.
+   * 
+   * @param dayOfMonth The number day of month
+   * @param isSendWeekly Is send weekly or daily
+   * @throws Exception
+   */
+  void processDigest(int dayOfMonth, boolean isSendWeekly) throws Exception;
   
   /**
    * Processes information when a list of notification messages are created.

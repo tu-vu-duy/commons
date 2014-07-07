@@ -56,15 +56,12 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
 
   private String                    workspace;
 
-  private NotificationConfiguration configuration;
-
   protected static final int MAX_LIMIT = 30;
   
   transient final ReentrantLock lock = new ReentrantLock();
   
   public UserSettingServiceImpl(SettingService settingService, NotificationConfiguration configuration) {
     this.settingService = settingService;
-    this.configuration = configuration;
     this.workspace = configuration.getWorkspace();
   }
 
@@ -218,11 +215,11 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
     }
   }
   
-  private StringBuilder buildQuery() {
+  private StringBuilder buildQuery(boolean isSendWeekly) {
     StringBuilder queryBuffer = new StringBuilder();
     queryBuffer.append(EXO_IS_ACTIVE).append("='true' AND (")
                .append(EXO_DAILY).append("<>''");
-    if (configuration.isSendWeekly()) {
+    if (isSendWeekly) {
       queryBuffer.append(" OR ").append(EXO_WEEKLY).append("<>''");
     }
 
@@ -232,9 +229,6 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   }
   
   private StringBuilder buildQuery(String pluginId) {
-    if (pluginId == null) {
-      return buildQuery();
-    }
     StringBuilder queryBuffer = new StringBuilder();
     queryBuffer.append(EXO_IS_ACTIVE).append("='true' AND (")
                 //if user wants to receive this kind of notification instantly
@@ -248,11 +242,11 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   }
   
   @Override
-  public List<String> getUserSettingByPlugin(String pluginId) {
+  public List<String> getInstantly(String pluginId) {
     SessionProvider sProvider = NotificationSessionManager.getOrCreateSessionProvider();;
     List<String> userIds = new ArrayList<String>();
     try {
-      NodeIterator iter = getDailyIterator(sProvider, 0, 0, pluginId);
+      NodeIterator iter = getDigestIterator(sProvider, 0, 0, pluginId, false);
       while (iter != null && iter.hasNext()) {
         Node node = iter.nextNode();
         userIds.add(node.getParent().getName());
@@ -273,14 +267,14 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
    * @return
    * @throws Exception
    */
-  private NodeIterator getDailyIterator(SessionProvider sProvider, int offset, int limit, String pluginId) throws Exception {
+  private NodeIterator getDigestIterator(SessionProvider sProvider, int offset, int limit, String pluginId, boolean isSendWeekly) throws Exception {
     Session session = getSession(sProvider, workspace);
     if(session.getRootNode().hasNode(SETTING_USER_PATH) == false) {
       return null;
     }
     
     StringBuilder strQuery = new StringBuilder("SELECT * FROM ").append(STG_SCOPE);
-    strQuery.append(" WHERE ").append(buildQuery(pluginId));
+    strQuery.append(" WHERE ").append((pluginId != null) ? buildQuery(pluginId) : buildQuery(isSendWeekly));
     
     QueryManager qm = session.getWorkspace().getQueryManager();
     QueryImpl query = (QueryImpl) qm.createQuery(strQuery.toString(), Query.SQL);
@@ -292,11 +286,11 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   }
   
   @Override
-  public List<UserSetting> getDaily(int offset, int limit) {
+  public List<UserSetting> getDigest(int offset, int limit, boolean isSendWeekly) {
     SessionProvider sProvider = NotificationSessionManager.getOrCreateSessionProvider();
     List<UserSetting> models = new ArrayList<UserSetting>();
     try {
-      NodeIterator iter = getDailyIterator(sProvider, offset, limit, null);
+      NodeIterator iter = getDigestIterator(sProvider, offset, limit, null, isSendWeekly);
       while (iter != null && iter.hasNext()) {
         Node node = iter.nextNode();
         models.add(fillModel(node));
@@ -341,10 +335,10 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   }
   
   @Override
-  public long getNumberOfDaily() {
+  public long getNumberOfDigest() {
     SessionProvider sProvider = NotificationSessionManager.getOrCreateSessionProvider();
     try {
-      NodeIterator iter = getDailyIterator(sProvider, 0, 0, null);
+      NodeIterator iter = getDigestIterator(sProvider, 0, 0, null, false);
       return (iter == null) ? 0l : iter.getSize();
     } catch (Exception e) {
       return 0l;
@@ -367,7 +361,7 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   }
 
   @Override
-  public List<UserSetting> getDefaultDaily(int offset, int limit) {
+  public List<UserSetting> getDefaultDigest(int offset, int limit, boolean isSendWeekly) {
     SessionProvider sProvider = NotificationSessionManager.getOrCreateSessionProvider();
     List<UserSetting> users = new ArrayList<UserSetting>();
     try {
@@ -390,7 +384,7 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   }
 
   @Override
-  public long getNumberOfDefaultDaily() {
+  public long getNumberOfDefaultDigest() {
     SessionProvider sProvider = NotificationSessionManager.getOrCreateSessionProvider();
     try {
       Session session = getSession(sProvider, workspace);
@@ -402,6 +396,25 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
       LOG.error("Failed to get default daily users have notification messages", e);
     }
     return 0;
+  }
+
+  @Override
+  public boolean hasSetting(String userId) {
+    try {
+      SettingValue<String> values = getSettingValue(userId, EXO_IS_ACTIVE);
+      if (values != null) {
+        return true;
+      }
+      Session session = getSession(CommonsUtils.getSystemSessionProvider(), workspace);
+      Node userHomeNode = session.getRootNode().getNode(SETTING_USER_PATH);
+      if (userHomeNode.hasNode(userId)) {
+        Node userNode = userHomeNode.getNode(userId);
+        return userNode.isNodeType(MIX_DEFAULT_SETTING);
+      }
+    } catch (Exception e) {
+      LOG.error("Failed to remove mixin for default setting of user: " + userId, e);
+    }
+    return false;
   }
 
 }

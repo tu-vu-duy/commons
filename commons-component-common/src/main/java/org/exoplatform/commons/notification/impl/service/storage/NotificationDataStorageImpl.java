@@ -69,7 +69,9 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
     final ReentrantLock localLock = lock;
     try {
       localLock.lock();
-      Node messageHomeNode = getOrCreateMessageParent(sProvider, workspace, message.getKey().getId());
+      NotificationKey key = message.getKey();
+      int createdDate = message.getDateCreated().get(Calendar.DAY_OF_MONTH);
+      Node messageHomeNode = getOrCreateMessageParent(sProvider, workspace, key.getId(), createdDate);
       Node messageNode = messageHomeNode.addNode(message.getId(), NTF_MESSAGE);
       messageNode.setProperty(NTF_FROM, message.getFrom());
       messageNode.setProperty(NTF_ORDER, message.getOrder());
@@ -92,12 +94,12 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
   }
 
   @Override
-  public Map<NotificationKey, List<NotificationInfo>> getByUser(UserSetting setting) {
+  public Map<NotificationKey, List<NotificationInfo>> getByUser(UserSetting setting, boolean isSendWeekly) {
     SessionProvider sProvider = NotificationSessionManager.getOrCreateSessionProvider();
     Map<NotificationKey, List<NotificationInfo>> notificationData = new LinkedHashMap<NotificationKey, List<NotificationInfo>>();
     try {
 
-      if (configuration.isSendWeekly() == false) {
+      if (!isSendWeekly) {
         // for daily
         for (String pluginId : setting.getDailyProviders()) {
           putMap(notificationData, NotificationKey.key(pluginId), getNotificationMessages(sProvider, pluginId, NTF_SEND_TO_DAILY, setting.getUserId()));
@@ -135,7 +137,8 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
 
   private Node getParentNodeByPlugin(SessionProvider sProvider, String property, String pluginId) throws Exception {
     if (NTF_SEND_TO_DAILY.equals(property)) {
-      return getOrCreateMessageParent(sProvider, workspace, pluginId).getParent();
+      int jobCurrentDay = configuration.getJobCurrentDay();
+      return getOrCreateMessageParent(sProvider, workspace, pluginId, jobCurrentDay);
     }
     return getMessageNodeByPluginId(sProvider, workspace, pluginId);
   }
@@ -163,13 +166,12 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
     userId = userId.replace("'", "''");
     
     StringBuilder strQuery = new StringBuilder("SELECT * FROM ").append(NTF_MESSAGE).append(" WHERE ");
-    
+    String pathNode = messageHomeNode.getPath();
     if (NTF_SEND_TO_DAILY.equals(property)) {
-      String dayName = String.valueOf(Calendar.getInstance().get(Calendar.DAY_OF_MONTH));
-      strQuery.append(" (jcr:path LIKE '").append(messageHomeNode.getPath()).append("/").append(DAY).append(dayName).append("/%'")
-              .append(" AND NOT jcr:path LIKE '").append(messageHomeNode.getPath()).append("/").append(DAY).append(dayName).append("/%/%')");
+      strQuery.append(" (jcr:path LIKE '").append(pathNode).append("/%'")
+              .append(" AND NOT jcr:path LIKE '").append(pathNode).append("/%/%')");
     } else {
-      strQuery.append(" jcr:path LIKE '").append(messageHomeNode.getPath()).append("/%'");
+      strQuery.append(" jcr:path LIKE '").append(pathNode).append("/%'");
     }
 
     strQuery.append(" AND (").append(property).append("='").append(userId).append("'");
@@ -180,7 +182,7 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
     } else {
       strQuery.append(")");
     }
-
+    
     QueryManager qm = messageHomeNode.getSession().getWorkspace().getQueryManager();
     Query query = qm.createQuery(strQuery.toString(), Query.SQL);
     NodeIterator it = query.execute().getNodes();
@@ -263,7 +265,7 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
   }
 
   @Override
-  public void removeMessageAfterSent() throws Exception {
+  public void removeMessageAfterSent(boolean isSendWeekly) throws Exception {
     final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
     
 //    SessionProvider sProvider = SessionProvider.createSystemProvider();
@@ -300,7 +302,7 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
         }
       }
       // remove node weekly for case send all.
-      if (configuration.isSendWeekly()) {
+      if (isSendWeekly) {
         Node messageHomeNode = notificationHome.getNode(MESSAGE_HOME_NODE);
         NodeIterator iterator = getNotificationNodeMessages(messageHomeNode, NTF_SEND_TO_WEEKLY, NotificationInfo.FOR_ALL_USER);
         String nodePath;
@@ -319,8 +321,6 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
       }
     } catch (Exception e) {
       LOG.warn("Failed to remove message after sent email notification", e);
-    } finally {
-//      sProvider.close();
     }
   }
 

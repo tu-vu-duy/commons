@@ -35,6 +35,7 @@ import org.exoplatform.commons.api.notification.service.setting.UserSettingServi
 import org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage;
 import org.exoplatform.commons.api.notification.service.storage.NotificationService;
 import org.exoplatform.commons.api.notification.service.template.DigestorService;
+import org.exoplatform.commons.notification.NotificationConfiguration;
 import org.exoplatform.commons.notification.NotificationContextFactory;
 import org.exoplatform.commons.notification.NotificationUtils;
 import org.exoplatform.commons.notification.impl.AbstractService;
@@ -73,7 +74,7 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     List<String> userIds = notification.getSendToUserIds();
     //
     if (notification.isSendAll()) {
-      userIds = notificationService.getUserSettingByPlugin(pluginId);
+      userIds = notificationService.getInstantly(pluginId);
     }
 
     List<String> userIdPendings = new ArrayList<String>();
@@ -150,7 +151,11 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
   }
 
   @Override
-  public void processDigest() throws Exception {
+  public void processDigest(boolean isSendWeekly) throws Exception {
+    processDigest(Calendar.getInstance().get(Calendar.DAY_OF_MONTH), isSendWeekly);
+  }
+
+  public void processDigest(int day, boolean isSendWeekly) throws Exception {
     /**
      * 1. just implements for daily
      * 2. apply Strategy pattern and Factory Pattern
@@ -158,54 +163,65 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     UserSettingService userService = CommonsUtils.getService(UserSettingService.class);
     DigestorService digest = CommonsUtils.getService(DigestorService.class);
     MailService mailService = CommonsUtils.getService(MailService.class);
-    
     PluginSettingService settingService = CommonsUtils.getService(PluginSettingService.class);
-    UserSetting defaultSetting = getDefaultUserSetting(settingService.getActivePluginIds());
-    //process for users used setting
-    /**
-     * Tested with 5000 users:
-     * 
-     * + limit = 20 time lost: 58881ms user settings 128992ms default user settings.
-     * + limit = 50 time lost: 44873ms user settings 70630ms default user settings.
-     * + limit = 100 time lost: 26997ms user settings 60051ms default user settings.
-    */
-    List<UserSetting> doneUsers = new ArrayList<UserSetting>();
-    
-    long startTime = System.currentTimeMillis();
-    int limit = 100;
-    int offset = 0;
-    while (true) {
-      List<UserSetting> userSettings = userService.getDaily(offset, limit);
-      if(userSettings.size() == 0) {
-        break;
-      }
-      send(digest, mailService, userSettings, null);
-      offset += limit;
-      doneUsers.addAll(userSettings);
+    NotificationConfiguration configuration = CommonsUtils.getService(NotificationConfiguration.class);
+    if (configuration.getJobCurrentDay() != null && !isSendWeekly) {
+      LOG.warn("The process digest daily running by other session.");
+      return;
     }
-    LOG.debug("Time to run process users have settings: " + (System.currentTimeMillis() - startTime) + "ms.");
-    long startTimeDefault = System.currentTimeMillis();
-    //process for users used default setting
-    offset = 0;
-    while (true) {
-      List<UserSetting> usersDefaultSettings = userService.getDefaultDaily(offset, limit);
-      if (usersDefaultSettings.size() == 0) {
-        break;
-      }
-      send(digest, mailService, usersDefaultSettings, defaultSetting);
-      offset += limit;
-      doneUsers.addAll(usersDefaultSettings);
+    if (!isSendWeekly) {
+      configuration.setJobCurrentDay(day);
     }
-    //
-    processDedaultUserSetting(mailService, userService, digest, defaultSetting, doneUsers);
-    
-    //Clear all stored message
-    storage.removeMessageAfterSent();
-    LOG.debug("Time to run process users used default settings: " + (System.currentTimeMillis() - startTimeDefault) + "ms.");
+    try {
+      UserSetting defaultSetting = getDefaultUserSetting(settingService.getActivePluginIds());
+      //process for users used setting
+      /**
+       * Tested with 5000 users:
+       * 
+       * + limit = 20 time lost: 58881ms user settings 128992ms default user settings.
+       * + limit = 50 time lost: 44873ms user settings 70630ms default user settings.
+       * + limit = 100 time lost: 26997ms user settings 60051ms default user settings.
+       */
+      List<UserSetting> doneUsers = new ArrayList<UserSetting>();
+      
+      long startTime = System.currentTimeMillis();
+      int limit = 100;
+      int offset = 0;
+      while (true) {
+        List<UserSetting> userSettings = userService.getDigest(offset, limit, isSendWeekly);
+        if(userSettings.size() == 0) {
+          break;
+        }
+        send(digest, mailService, userSettings, null, isSendWeekly);
+        offset += limit;
+        doneUsers.addAll(userSettings);
+      }
+      LOG.debug("Time to run process users have settings: " + (System.currentTimeMillis() - startTime) + "ms.");
+      long startTimeDefault = System.currentTimeMillis();
+      //process for users used default setting
+      offset = 0;
+      while (true) {
+        List<UserSetting> usersDefaultSettings = userService.getDefaultDigest(offset, limit, isSendWeekly);
+        if (usersDefaultSettings.size() == 0) {
+          break;
+        }
+        send(digest, mailService, usersDefaultSettings, defaultSetting, isSendWeekly);
+        offset += limit;
+        doneUsers.addAll(usersDefaultSettings);
+      }
+      //
+      processDedaultUserSetting(mailService, userService, digest, defaultSetting, doneUsers, isSendWeekly);
+      
+      //Clear all stored message
+      storage.removeMessageAfterSent(isSendWeekly);
+      LOG.debug("Time to run process users used default settings: " + (System.currentTimeMillis() - startTimeDefault) + "ms.");
+    } finally {
+      configuration.setJobCurrentDay(null);
+    }
   }
 
   private void processDedaultUserSetting(MailService mailService, UserSettingService userService, DigestorService digest,
-                                         UserSetting defaultSetting, List<UserSetting> doneUsers) throws Exception {
+                                         UserSetting defaultSetting, List<UserSetting> doneUsers, boolean isSendWeekly) throws Exception {
     OrganizationService organizationService = CommonsUtils.getService(OrganizationService.class);
     ListAccess<User> allUsers = organizationService.getUserHandler().findAllUsers();
     int size = allUsers.getSize(), limit = 200;
@@ -235,7 +251,7 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
           }
         }
         //
-        send(digest, mailService, usersDefaultSettings, defaultSetting);
+        send(digest, mailService, usersDefaultSettings, defaultSetting, isSendWeekly);
 
         index += length;
         length = Math.min(limit, size - index);
@@ -249,7 +265,8 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     }
   }
   
-  private void send(DigestorService digest, MailService mail, List<UserSetting> userSettings, UserSetting defaultSetting) {
+  private void send(DigestorService digest, MailService mail, List<UserSetting> userSettings,
+                     UserSetting defaultSetting, boolean isSendWeekly) {
     final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
     
     for (UserSetting userSetting : userSettings) {
@@ -262,10 +279,10 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
                                     .setUserId(userSetting.getUserId())
                                     .setLastUpdateTime(userSetting.getLastUpdateTime());
       }
-      Map<NotificationKey, List<NotificationInfo>> notificationMessageMap = storage.getByUser(userSetting);
+      Map<NotificationKey, List<NotificationInfo>> notificationMessageMap = storage.getByUser(userSetting, isSendWeekly);
 
       if (notificationMessageMap.size() > 0) {
-        MessageInfo messageInfo = digest.buildMessage(notificationMessageMap, userSetting);
+        MessageInfo messageInfo = digest.buildMessage(notificationMessageMap, userSetting, isSendWeekly);
         if (messageInfo != null) {
           //
           CommonsUtils.getService(QueueMessage.class).put(messageInfo);

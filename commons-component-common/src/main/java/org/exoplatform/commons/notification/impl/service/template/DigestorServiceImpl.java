@@ -35,7 +35,6 @@ import org.exoplatform.commons.api.notification.plugin.NotificationPluginUtils;
 import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
 import org.exoplatform.commons.api.notification.service.template.DigestorService;
 import org.exoplatform.commons.api.notification.service.template.TemplateContext;
-import org.exoplatform.commons.notification.NotificationConfiguration;
 import org.exoplatform.commons.notification.NotificationContextFactory;
 import org.exoplatform.commons.notification.NotificationUtils;
 import org.exoplatform.commons.notification.impl.DigestDailyPlugin;
@@ -57,7 +56,8 @@ public class DigestorServiceImpl implements DigestorService {
   }
   
   
-  public MessageInfo buildMessage(Map<NotificationKey, List<NotificationInfo>> notificationData, UserSetting userSetting) {
+  public MessageInfo buildMessage(Map<NotificationKey, List<NotificationInfo>> notificationData,
+                                   UserSetting userSetting, boolean isSendWeekly) {
     MessageInfo messageInfo = null;
 
     if (notificationData == null || notificationData.size() == 0) {
@@ -69,7 +69,6 @@ public class DigestorServiceImpl implements DigestorService {
       messageInfo = new MessageInfo();
       PluginSettingService pluginService = CommonsUtils.getService(PluginSettingService.class);
       NotificationPluginContainer containerService = CommonsUtils.getService(NotificationPluginContainer.class);
-      NotificationConfiguration configuration = CommonsUtils.getService(NotificationConfiguration.class);
       
       List<String> activeProviders = pluginService.getActivePluginIds();
       NotificationContext nCtx = NotificationContextImpl.cloneInstance();
@@ -109,7 +108,7 @@ public class DigestorServiceImpl implements DigestorService {
             .replace(replacedStr, "margin: 0; background-color: #F9F9F9; padding: 15px 20px;");
       }
 
-      DigestInfo digestInfo = new DigestInfo(configuration, userSetting);
+      DigestInfo digestInfo = new DigestInfo(userSetting, isSendWeekly);
 
       TemplateContext ctx = new TemplateContext(digestInfo.getPluginId(), digestInfo.getLocale().getLanguage());
 
@@ -164,7 +163,7 @@ public class DigestorServiceImpl implements DigestorService {
 
     private boolean isWeekly;
 
-    public DigestInfo(NotificationConfiguration configuration, UserSetting userSetting) {
+    public DigestInfo(UserSetting userSetting, boolean isSendWeekly) {
       firstName = NotificationPluginUtils.getFirstName(userSetting.getUserId());
       sendTo = NotificationPluginUtils.getTo(userSetting.getUserId());
       portalName = NotificationPluginUtils.getBrandingPortalName();
@@ -173,7 +172,7 @@ public class DigestorServiceImpl implements DigestorService {
       footerLink = NotificationUtils.getProfileUrl(userSetting.getUserId());
       locale = (language == null || language.length() == 0) ? Locale.ENGLISH : new Locale(language);
       
-      isWeekly = (configuration.isSendWeekly() && userSetting.getWeeklyProviders().size() > 0);
+      isWeekly = (isSendWeekly && userSetting.getWeeklyProviders().size() > 0);
       //
       if(isWeekly) {
         pluginId = DigestWeeklyPlugin.ID;

@@ -16,8 +16,6 @@
  */
 package org.exoplatform.commons.notification.impl;
 
-import java.util.Calendar;
-
 import javax.jcr.Node;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
@@ -136,20 +134,16 @@ public abstract class AbstractService {
 
   /**
    * Makes the node path for MessageHome node
-   * "/eXoNotification/messageHome/<pluginId>/<DAY_OF_MONTH>/<HOUR_OF_DAY>/"
+   * "/eXoNotification/messageHome/<pluginId>/<DAY_OF_MONTH>/"
    * 
    * @param sProvider
    * @param pluginId
    * @return
    * @throws Exception
    */
-  protected Node getOrCreateMessageParent(SessionProvider sProvider, String workspace, String pluginId) throws Exception {
+  protected Node getOrCreateMessageParent(SessionProvider sProvider, String workspace, String pluginId, int dayName) throws Exception {
     Node providerNode = getMessageNodeByPluginId(sProvider, workspace, pluginId);
-    String dayName = String.valueOf(Calendar.getInstance().get(Calendar.DAY_OF_MONTH));
     Node dayNode = getOrCreateMessageNode(providerNode, DAY + dayName);
-//    String hourName = String.valueOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY));
-//    Node messageParentNode = getOrCreateMessageNode(dayNode, HOUR + hourName);
-//    return messageParentNode;
     return dayNode;
   }
 
@@ -170,7 +164,7 @@ public abstract class AbstractService {
     return getOrCreateMessageNode(messageHome, pluginId);
   }
   
-  private Node getOrCreateMessageNode(Node parent, String nodeName) throws Exception {
+  protected Node getOrCreateMessageNode(Node parent, String nodeName) throws Exception {
     if (parent.hasNode(nodeName) == false) {
       Node messageHome = parent.addNode(nodeName, NTF_MESSAGE_HOME);
       messageHome.addMixin(MIX_SUB_MESSAGE_HOME);
