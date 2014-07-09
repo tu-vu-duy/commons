@@ -83,7 +83,7 @@ public class UserStateService {
       session.save();
       ExoCache<Serializable, UserStateModel> cache = getUserStateCache();
       if (cache == null) {
-        LOG.warn("Cant save user state of {} to cache", userId);
+        LOG.warn("Can't save user state of {} to cache", userId);
       } else {
         cache.put(userKey, model);
       }
@@ -112,18 +112,19 @@ public class UserStateService {
         userNodeApp = nodeHierarchyCreator.getUserApplicationNode(sessionProvider, userId);
       } catch (Exception e) {
         //Do nothing
+        LOG.error("getUserState(). Failed to getUserApplicationNode " + e.getMessage(), e);    	  
       } 
       try{               
         if(userNodeApp == null || !userNodeApp.hasNode(VIDEOCALLS_BASE_PATH)) return null;        
         Node userState = userNodeApp.getNode(VIDEOCALLS_BASE_PATH);
         model = new UserStateModel();
         model.setUserId(userState.getProperty(USER_ID_PROP).getString());
-        model.setLastActivity(Integer.parseInt(userState.getProperty(LAST_ACTIVITY_PROP).getString()));
-        model.setStatus(userState.getProperty(STATUS_PROP).getString());        
+        model.setLastActivity(Long.parseLong(userState.getProperty(LAST_ACTIVITY_PROP).getString()));
+        model.setStatus(userState.hasProperty(STATUS_PROP) ? userState.getProperty(STATUS_PROP).getString() : DEFAULT_STATUS);        
         userStateCache.put(userKey, model);
       } catch(Exception ex) {
         if (LOG.isErrorEnabled()) {
-          LOG.error("getUserState() failed because of ", ex.getMessage());
+          LOG.error("getUserState() failed.", ex);
         }
       } finally {
         sessionProvider.close();
