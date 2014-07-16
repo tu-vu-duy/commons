@@ -16,8 +16,15 @@
  */
 package org.exoplatform.services.user;
 
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.ws.rs.core.Response;
+
 import org.apache.commons.lang.StringUtils;
 import org.exoplatform.commons.testing.BaseResourceTestCase;
+import org.exoplatform.services.cache.CacheService;
+import org.exoplatform.services.cache.ExoCache;
 import org.exoplatform.services.jcr.core.ManageableRepository;
 import org.exoplatform.services.rest.impl.ContainerResponse;
 import org.exoplatform.services.rest.wadl.research.HTTPMethods;
@@ -25,26 +32,17 @@ import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 import org.junit.Ignore;
 
-import javax.ws.rs.core.Response;
-import java.util.Date;
-
 /**
  * Created by The eXo Platform SAS
  * Author : eXoPlatform
  *          exo@exoplatform.com
  * Apr 23, 2014  
  */
-//@ConfiguredBy({
-//  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/portal/test-configuration.xml"),
-//  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/portal/configuration.xml")
-//  })
 @Ignore
 public class RESTUserServiceTest extends BaseResourceTestCase {
   
   private UserStateService userStateService;
   private RESTUserService restUserService;
-
-  private String defaultWorkspace;
 
   public void setUp() throws Exception {
     super.setUp();
@@ -54,18 +52,14 @@ public class RESTUserServiceTest extends BaseResourceTestCase {
     userStateService = getService(UserStateService.class);
     restUserService = getService(RESTUserService.class);
 
-    ManageableRepository repo  = repositoryService.getRepository(REPO_NAME);
-
-    defaultWorkspace = repo.getConfiguration().getDefaultWorkspaceName();
-    repo.getConfiguration().setDefaultWorkspaceName("collaboration");
-
     this.resourceBinder.addResource(restUserService, null);
   }
   
   public void tearDown() throws Exception {
-    ManageableRepository repo  = repositoryService.getRepository(REPO_NAME);
-    repo.getConfiguration().setDefaultWorkspaceName(defaultWorkspace);
-    super.tearDown();
+    ExoCache<Serializable, UserStateModel> cache = getService(CacheService.class)
+        .getCacheInstance(UserStateService.class.getName() + REPO_NAME);
+    //
+    cache.clearCache();
   }
 
   public void testUpdateState() throws Exception {
@@ -80,7 +74,6 @@ public class RESTUserServiceTest extends BaseResourceTestCase {
     ContainerResponse response = service(HTTPMethods.GET.toString(), restPath, StringUtils.EMPTY, null, null);
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     assertTrue(userModel.getLastActivity() != userStateService.getUserState(session.getUserID()).getLastActivity());    
-    System.out.println("Response entity: " + response.getEntity());
   }
 
   public void testOnline() throws Exception {
@@ -100,7 +93,6 @@ public class RESTUserServiceTest extends BaseResourceTestCase {
     assertTrue(response.getEntity().toString().contains("\"userId\":\"" + userModel.getUserId() + "\""));
     
     assertFalse(response.getEntity().toString().contains("\"userId\":\"" + userModel.getUserId() + "temp\""));
-    System.out.println("Response entity: " + response.getEntity());
   }
   
   public void testGetStatus() throws Exception {
@@ -115,13 +107,11 @@ public class RESTUserServiceTest extends BaseResourceTestCase {
 
     ContainerResponse response = service(HTTPMethods.GET.toString(), restPath, StringUtils.EMPTY, null, null);
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     assertTrue(response.getEntity().toString().contains("\"activity\":\"online\""));
     assertTrue(response.getEntity().toString().contains("\"status\":\"" + userModel.getStatus() + "\""));
     assertTrue(response.getEntity().toString().contains("\"userId\":\"" + userModel.getUserId() + "\""));
     
     assertFalse(response.getEntity().toString().contains("\"userId\":\"" + userModel.getUserId() + "temp\""));
-    System.out.println("Response entity: " + response.getEntity());
   }
   
   public void testSetStatus() throws Exception {
@@ -133,16 +123,12 @@ public class RESTUserServiceTest extends BaseResourceTestCase {
                            UserStateService.DEFAULT_STATUS);
     userStateService.save(userModel);
     userStateService.ping(userModel.getUserId());
-    System.out.println("old status: " + userStateService.getUserState(session.getUserID()).getStatus());
+    assertTrue(userStateService.getUserState(session.getUserID()).getStatus().equals(UserStateService.DEFAULT_STATUS));
     
     ContainerResponse response = service(HTTPMethods.PUT.toString(), restPath, StringUtils.EMPTY, null, null);
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     
-    assertFalse(userStateService.getUserState(userModel.getUserId()).getStatus().equals(UserStateService.DEFAULT_STATUS));
     assertTrue(userStateService.getUserState(userModel.getUserId()).getStatus().equals("offline"));
-
-    System.out.println("Response entity: " + response.getEntity());
-    System.out.println("new status: " + userStateService.getUserState(session.getUserID()).getStatus());
   }
 
 }

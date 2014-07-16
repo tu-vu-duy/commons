@@ -17,14 +17,22 @@
 package org.exoplatform.services.user;
 
 import org.exoplatform.commons.testing.BaseCommonsTestCase;
+import org.exoplatform.services.cache.CacheService;
+import org.exoplatform.services.cache.ExoCache;
 import org.exoplatform.services.jcr.core.ManageableRepository;
 import org.exoplatform.services.jcr.ext.common.SessionProvider;
 import org.exoplatform.services.jcr.ext.hierarchy.NodeHierarchyCreator;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
+import org.exoplatform.services.security.MembershipEntry;
 
 import javax.jcr.Node;
+import javax.jcr.Session;
+
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
@@ -47,13 +55,11 @@ public class UserStateServiceTest extends BaseCommonsTestCase {
   private UserStateService userStateService;
   private NodeHierarchyCreator nodeHierarchyCreator;
   
-  private String defaultWorkspace;
-  
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    ConversationState c = new ConversationState(new Identity(session.getUserID()));
-    ConversationState.setCurrent(c);
+    //
+    loginUser(session.getUserID(), false);
 
     userStateService = getService(UserStateService.class);
     nodeHierarchyCreator = getService(NodeHierarchyCreator.class);
@@ -61,16 +67,21 @@ public class UserStateServiceTest extends BaseCommonsTestCase {
     ManageableRepository repo  = repositoryService.getRepository(REPO_NAME);
     session = repo.getSystemSession(WORKSPACE_NAME);
     root = session.getRootNode();
-    
-    defaultWorkspace = repo.getConfiguration().getDefaultWorkspaceName();
-    repo.getConfiguration().setDefaultWorkspaceName("collaboration");
+    if (!root.hasNode("Users")) {
+      SessionProvider provider = new SessionProvider(ConversationState.getCurrent());
+      Session session_ = provider.getSession(WORKSPACE_NAME, repo);
+      session_.getRootNode().addNode("Users", "nt:unstructured");
+      session_.save();
+    }
   }
   
   protected void tearDown() throws Exception {
-    ManageableRepository repo  = repositoryService.getRepository(REPO_NAME);
-    repo.getConfiguration().setDefaultWorkspaceName(defaultWorkspace);
+    ExoCache<Serializable, UserStateModel> cache = getService(CacheService.class)
+        .getCacheInstance(UserStateService.class.getName() + REPO_NAME);
+    //
+    cache.clearCache();
   }
-  
+
   public void testSave() throws Exception {
     UserStateModel userModel = 
         new UserStateModel(session.getUserID(),
@@ -137,6 +148,17 @@ public class UserStateServiceTest extends BaseCommonsTestCase {
     userStateService.ping(userModel.getUserId());
 
     assertTrue(userModel.getLastActivity() != userStateService.getUserState(session.getUserID()).getLastActivity());
+    
+    //
+    loginUser("mary", true);
+    assertTrue(userStateService.getUserState("mary").getStatus().equals(UserStateService.DEFAULT_STATUS));
+    //
+    loginUser("demo", false);
+    // get status of user Mary by current user Demo
+    assertTrue(userStateService.getUserState("mary").getStatus().equals(UserStateService.DEFAULT_STATUS));
+    // get status of user Demo by anonymous user
+    ConversationState.setCurrent(null);
+    assertNull(userStateService.getUserState("demo"));
   }
   
   public void testOnline() throws Exception {
@@ -147,7 +169,7 @@ public class UserStateServiceTest extends BaseCommonsTestCase {
                            UserStateService.DEFAULT_STATUS);
     userStateService.save(userModel);
     userStateService.ping(userModel.getUserId());
-
+    //
     List<UserStateModel> onlines = userStateService.online();
     assertEquals(1, onlines.size());
     assertEquals(session.getUserID(), onlines.get(0).getUserId());
@@ -166,6 +188,22 @@ public class UserStateServiceTest extends BaseCommonsTestCase {
     assertTrue(userStateService.isOnline(session.getUserID()));
     //
     assertFalse(userStateService.isOnline("demo"));
+    //
+    loginUser("demo", true);
+    assertTrue(userStateService.isOnline("demo"));
+  }
+  
+  private void loginUser(String userId, boolean hasPing) {
+    Collection<MembershipEntry> membershipEntries = new ArrayList<MembershipEntry>();
+    MembershipEntry membershipEntry = new MembershipEntry("/platform/administrators", "*");
+    membershipEntries.add(membershipEntry);
+    Identity identity = new Identity(userId, membershipEntries);
+    ConversationState state = new ConversationState(identity);
+    ConversationState.setCurrent(state);
+    //
+    if (hasPing) {
+      userStateService.ping(userId);
+    }
   }
 
 }
