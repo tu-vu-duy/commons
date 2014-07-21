@@ -16,6 +16,7 @@
  */
 package org.exoplatform.commons.notification.plugin;
 
+import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 
@@ -33,13 +34,15 @@ import org.exoplatform.container.xml.InitParams;
 
 public class PluginTest extends AbstractNotificationPlugin {
 
+  public static final String ID = "Test_ID";
+
   public PluginTest(InitParams initParams) {
     super(initParams);
   }
 
   @Override
   public String getId() {
-    return "Test_ID";
+    return ID;
   }
 
   @Override
@@ -53,6 +56,7 @@ public class PluginTest extends AbstractNotificationPlugin {
     return notificationInfo.to("demo").setTo("demo")
                             .with("USER", "root")
                             .with("TEST_VALUE", "Test value")
+                            .with("objectId", "idofobject")
                             .with("CHILD_VALUE", "The content of child plugin ...")
                             .key(getId()).end();
   }
@@ -86,7 +90,13 @@ public class PluginTest extends AbstractNotificationPlugin {
 
   @Override
   protected boolean makeDigest(NotificationContext ctx, Writer writer) {
-    return false;
+    List<NotificationInfo> notifications = ctx.getNotificationInfos();
+    try {
+      writer.append("The plugin " + getId() + " has " + notifications.size() + " events");
+    } catch (IOException e) {
+      return false;
+    }
+    return true;
   }
 
 }

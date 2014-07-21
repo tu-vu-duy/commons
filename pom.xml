@@ -59,6 +59,8 @@
     <org.gatein.portal.version>3.5.x-PLF-SNAPSHOT</org.gatein.portal.version>
     <!-- Platform Project Dependencies -->
     <org.exoplatform.platform-ui.version>4.1.x-plfui-stabilization-SNAPSHOT</org.exoplatform.platform-ui.version>
+    <!-- For surefire and failsafe to be compatible with jacoco -->
+    <argLine>-Xmx1024m -XX:MaxPermSize=512m</argLine>
   </properties>
   <dependencyManagement>
     <!-- ### NEVER CHANGE THIS ORDER OF DEPMGT ### -->
@@ -220,12 +222,12 @@
       </dependency>
       <dependency>
         <groupId>org.gatein.portal</groupId>
-        <artifactId>exo.portal.component.resources</artifactId>
+        <artifactId>exo.portal.component.scripting</artifactId>
         <version>${org.gatein.portal.version}</version>
       </dependency>
       <dependency>
         <groupId>org.gatein.portal</groupId>
-        <artifactId>exo.portal.component.test.core</artifactId>
+        <artifactId>exo.portal.component.resources</artifactId>
         <version>${org.gatein.portal.version}</version>
       </dependency>
       <dependency>
@@ -251,6 +253,28 @@
       <dependency>
         <groupId>org.gatein.portal</groupId>
         <artifactId>exo.portal.webui.portlet</artifactId>
+        <version>${org.gatein.portal.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.gatein.portal</groupId>
+        <artifactId>exo.portal.component.identity</artifactId>
+        <version>${org.gatein.portal.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.gatein.portal</groupId>
+        <artifactId>exo.portal.component.portal</artifactId>
+        <version>${org.gatein.portal.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.gatein.portal</groupId>
+        <artifactId>exo.portal.component.test.jcr</artifactId>
+        <version>${org.gatein.portal.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.gatein.portal</groupId>
+        <artifactId>exo.portal.component.test.core</artifactId>
         <version>${org.gatein.portal.version}</version>
       </dependency>
       <!-- Import versions of jcr modules to use -->

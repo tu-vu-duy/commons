@@ -37,12 +37,14 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
- * Created by The eXo Platform SAS Author : eXoPlatform annb@exoplatform.com May
- * 18, 2012
+ * Created by The eXo Platform SAS
+ * Author : eXoPlatform
+ *          annb@exoplatform.com
+ * May 18, 2012
  */
 public class ContentInitializerServiceTest extends TestCase {
 
-  private static final Log LOGGER = ExoLogger.getLogger(ContentInitializerServiceTest.class);
+  private static final Log LOG = ExoLogger.getLogger(ContentInitializerServiceTest.class);
   private ContentInitializerService contentInitializerServiceActual;
   
   
@@ -51,15 +53,13 @@ public class ContentInitializerServiceTest extends TestCase {
    */
   
   public void setUp() {
-    LOGGER.info("testContentInitializerService");
+    LOG.info("testContentInitializerService");
     // Actual
     RepositoryService repositoryServiceActual = mock(RepositoryService.class);
     NodeHierarchyCreator nodeHierarchyCreatorActual = mock(NodeHierarchyCreator.class);
     OrganizationService organizationServiceActual = mock(OrganizationService.class);
-    contentInitializerServiceActual = new ContentInitializerService(repositoryServiceActual,
-                                                                                              nodeHierarchyCreatorActual,
+    contentInitializerServiceActual = new ContentInitializerService(repositoryServiceActual, nodeHierarchyCreatorActual,
                                                                                               organizationServiceActual);
-
     //verify if class ContentInitializerService
     assertEquals(contentInitializerServiceActual.getClass(), ContentInitializerService.class);
     //verify if mock class is not null
@@ -71,7 +71,7 @@ public class ContentInitializerServiceTest extends TestCase {
    */
   @SuppressWarnings("rawtypes")
   public void testAddPlugin() {
-    LOGGER.info("testAddPlugin");
+    LOG.info("testAddPlugin");
 
     ContentInitializerService contentMock = mock(ContentInitializerService.class);
 
@@ -83,8 +83,7 @@ public class ContentInitializerServiceTest extends TestCase {
     doAnswer(new Answer() {
       public Object answer(InvocationOnMock invocation) {
         Object[] args = invocation.getArguments();
-        LOGGER.info("argument add is " + args[0]);
-        System.out.println("add for mock");
+        LOG.info("argument add is " + args[0] + "add for mock");
         listDeploymentPluginActual.add((DeploymentPlugin) args[0]);
         return listDeploymentPluginActual;
       }
@@ -111,7 +110,7 @@ public class ContentInitializerServiceTest extends TestCase {
    */
   public void testStart() {
 
-    LOGGER.info("testStart");
+    LOG.info("testStart");
 
     Node contentInitializerServiceMock = mock(Node.class);
     Node contentInitializerServiceLogMock = mock(Node.class);
@@ -132,8 +131,6 @@ public class ContentInitializerServiceTest extends TestCase {
 
     ContentInitializerService contentMock = mock(ContentInitializerService.class);
     contentMock.start();
-
-    
     
     //verify call method    
     verify(contentMock).start();
@@ -144,7 +141,7 @@ public class ContentInitializerServiceTest extends TestCase {
    * test method stop
    */
   public void testStop() {
-    LOGGER.info("testStop");
+    LOG.info("testStop");
     ContentInitializerService contentMock = mock(ContentInitializerService.class);
     contentMock.stop();
     

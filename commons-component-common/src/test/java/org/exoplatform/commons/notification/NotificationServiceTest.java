@@ -14,16 +14,20 @@ import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.model.UserSetting;
 import org.exoplatform.commons.api.notification.model.UserSetting.FREQUENCY;
+import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugin;
 import org.exoplatform.commons.api.notification.service.NotificationCompletionService;
+import org.exoplatform.commons.api.notification.service.setting.PluginContainer;
 import org.exoplatform.commons.api.notification.service.setting.UserSettingService;
 import org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage;
 import org.exoplatform.commons.api.notification.service.storage.NotificationService;
 import org.exoplatform.commons.notification.impl.AbstractService;
+import org.exoplatform.commons.notification.plugin.PluginTest;
 
 public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
   
   private NotificationService       notificationService;
   private NotificationDataStorage   notificationDataStorage;
+  private PluginContainer container;
   private NotificationConfiguration configuration;
   
   @Override
@@ -38,6 +42,8 @@ public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
     configuration = getService(NotificationConfiguration.class);
     assertNotNull(configuration);
     configuration.setJobCurrentDay(Calendar.getInstance().get(Calendar.DAY_OF_MONTH));
+    
+    container = getService(PluginContainer.class);
     //
     initDefaultHomeNode();
     getService(NotificationCompletionService.class);
@@ -46,7 +52,8 @@ public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
   @Override
   public void tearDown() throws Exception {
     // remove all notification node
-    removeChildNodes("/eXoNotification/messageHome");
+    removeChildNodes("/eXoNotification/messageHome/" + PluginTest.ID);
+    removeChildNodes("/eXoNotification/messageInfoHome");
     super.tearDown();
   }
 
@@ -65,14 +72,13 @@ public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
   }
 
   private NotificationInfo saveNotification(String userDaily, String userWeekly, Calendar createdDate) throws Exception {
-    NotificationInfo notification = NotificationInfo.instance();
+    AbstractNotificationPlugin pluginTest = container.getPlugin(new NotificationKey(PluginTest.ID));
+    NotificationInfo notification = pluginTest.buildNotification(null);
     if (createdDate != null) {
       notification.setDateCreated(createdDate);
     }
-    Map<String, String> params = new HashMap<String, String>();
-    params.put("objectId", "idofobject");
-    notification.key("TestPlugin").setSendToDaily(userDaily)
-                .setSendToWeekly(userWeekly).setOwnerParameter(params).setOrder(1);
+    notification.setSendToDaily(userDaily)
+                .setSendToWeekly(userWeekly);
     notificationDataStorage.save(notification);
     addMixin(notification.getId());
     return notification;
@@ -91,7 +97,7 @@ public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
   public void testSave() throws Exception {
     NotificationInfo notification = saveNotification("root", "demo");
     
-    NotificationInfo notification2 = getNotificationInfoByKeyIdAndParam("TestPlugin", "objectId=idofobject");
+    NotificationInfo notification2 = getNotificationInfoByKeyIdAndParam(PluginTest.ID, "objectId=idofobject");
     assertNotNull(notification2);
     
     assertTrue(notification2.equals(notification));
@@ -101,30 +107,30 @@ public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
   public void testNormalGetByUserAndRemoveMessagesSent() throws Exception {
     NotificationInfo notification = saveNotification("root", "demo");
     UserSetting userSetting = UserSetting.getInstance();
-    userSetting.setUserId("root").addProvider("TestPlugin", FREQUENCY.DAILY);
+    userSetting.setUserId("root").addProvider(PluginTest.ID, FREQUENCY.DAILY);
     userSetting.setActive(true);
     
     Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(userSetting, false);
     
-    List<NotificationInfo> list = map.get(new NotificationKey("TestPlugin"));
+    List<NotificationInfo> list = map.get(new NotificationKey(PluginTest.ID));
     assertEquals(1, list.size());
     
     assertTrue(list.get(0).equals(notification));
     // after sent, user demo will auto remove from property daily
-    NotificationInfo notification2 = getNotificationInfoByKeyIdAndParam("TestPlugin", "objectId=idofobject");
+    NotificationInfo notification2 = getNotificationInfoByKeyIdAndParam(PluginTest.ID, "objectId=idofobject");
     assertNotNull(notification2);
     
     assertEquals(0, notification2.getSendToDaily().length);
     
-    userSetting.setUserId("demo").addProvider("TestPlugin", FREQUENCY.WEEKLY);
+    userSetting.setUserId("demo").addProvider(PluginTest.ID, FREQUENCY.WEEKLY);
     map = notificationDataStorage.getByUser(userSetting, true);
-    list = map.get(new NotificationKey("TestPlugin"));
+    list = map.get(new NotificationKey(PluginTest.ID));
     assertEquals(1, list.size());
     
     
     notificationDataStorage.removeMessageAfterSent(true);
     
-    notification2 = getNotificationInfoByKeyIdAndParam("TestPlugin", "objectId=idofobject");
+    notification2 = getNotificationInfoByKeyIdAndParam(PluginTest.ID, "objectId=idofobject");
     assertNull(notification2);
   }
 
@@ -132,21 +138,21 @@ public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
     NotificationInfo notification = NotificationInfo.instance();
     Map<String, String> params = new HashMap<String, String>();
     params.put("objectId", "idofobject");
-    notification.key("TestPlugin").setSendAll(true).setOwnerParameter(params).setOrder(1);
+    notification.key(PluginTest.ID).setSendAll(true).setOwnerParameter(params).setOrder(1);
     notificationDataStorage.save(notification);
     
     UserSetting userSetting = UserSetting.getInstance();
-    userSetting.setUserId("root").addProvider("TestPlugin", FREQUENCY.DAILY);
+    userSetting.setUserId("root").addProvider(PluginTest.ID, FREQUENCY.DAILY);
     userSetting.setActive(true);
     // Test send to daily
     Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(userSetting, false);
     
-    List<NotificationInfo> list = map.get(new NotificationKey("TestPlugin"));
+    List<NotificationInfo> list = map.get(new NotificationKey(PluginTest.ID));
     assertEquals(1, list.size());
     
     assertTrue(list.get(0).equals(notification));
     // check value from node
-    NotificationInfo notification2 = getNotificationInfoByKeyIdAndParam("TestPlugin", "objectId=idofobject");
+    NotificationInfo notification2 = getNotificationInfoByKeyIdAndParam(PluginTest.ID, "objectId=idofobject");
     assertNotNull(notification2);
 
     assertEquals(NotificationInfo.FOR_ALL_USER, notification2.getSendToDaily()[0]);
@@ -154,18 +160,18 @@ public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
     notificationDataStorage.removeMessageAfterSent(false);
 
     // after sent, the value on on property sendToDaily will auto removed
-    notification2 = getNotificationInfoByKeyIdAndParam("TestPlugin", "objectId=idofobject");
+    notification2 = getNotificationInfoByKeyIdAndParam(PluginTest.ID, "objectId=idofobject");
     assertEquals(0, notification2.getSendToDaily().length);
     
     // Test send to weekly
-    userSetting.setUserId("demo").addProvider("TestPlugin", FREQUENCY.WEEKLY);
+    userSetting.setUserId("demo").addProvider(PluginTest.ID, FREQUENCY.WEEKLY);
     map = notificationDataStorage.getByUser(userSetting, true);
-    list = map.get(new NotificationKey("TestPlugin"));
+    list = map.get(new NotificationKey(PluginTest.ID));
     assertEquals(1, list.size());
     
     notificationDataStorage.removeMessageAfterSent(true);
     
-    notification2 = getNotificationInfoByKeyIdAndParam("TestPlugin", "objectId=idofobject");
+    notification2 = getNotificationInfoByKeyIdAndParam(PluginTest.ID, "objectId=idofobject");
     assertNull(notification2);
   }
 
@@ -174,11 +180,11 @@ public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
     NotificationInfo notification = saveNotification(userNameSpecial, "demo");
     //
     UserSetting userSetting = UserSetting.getInstance();
-    userSetting.setUserId(userNameSpecial).addProvider("TestPlugin", FREQUENCY.DAILY);
+    userSetting.setUserId(userNameSpecial).addProvider(PluginTest.ID, FREQUENCY.DAILY);
     userSetting.setActive(true);
     //
     Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(userSetting, false);
-    List<NotificationInfo> list = map.get(new NotificationKey("TestPlugin"));
+    List<NotificationInfo> list = map.get(new NotificationKey(PluginTest.ID));
     //
     assertEquals(1, list.size());
     assertTrue(list.get(0).equals(notification));
@@ -199,11 +205,12 @@ public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
     for (int i = 0; i < numberYesterday; i++) {
       saveNotification("demo", "", cal);
     }
-    assertEquals(numberToday, ((Node) session.getItem("/eXoNotification/messageHome/TestPlugin/d" + today)).getNodes().getSize());
-    assertEquals(numberYesterday, ((Node) session.getItem("/eXoNotification/messageHome/TestPlugin/d" + yesterday)).getNodes().getSize());
+    String pluginPath = "/eXoNotification/messageHome/" + PluginTest.ID;
+    assertEquals(numberToday, ((Node) session.getItem(pluginPath + "/d" + today)).getNodes().getSize());
+    assertEquals(numberYesterday, ((Node) session.getItem(pluginPath + "/d" + yesterday)).getNodes().getSize());
     // Save user setting
     UserSetting userSetting = UserSetting.getInstance();
-    userSetting.setUserId("demo").addProvider("TestPlugin", FREQUENCY.DAILY);
+    userSetting.setUserId("demo").addProvider(PluginTest.ID, FREQUENCY.DAILY);
     userSetting.setActive(true);
     getService(UserSettingService.class).save(userSetting);
     addLastUpdateTime("demo");
@@ -213,9 +220,7 @@ public class NotificationServiceTest extends AsbtractBaseNotificationTestCase {
     // check data after run digest
     assertEquals(1, ((Node) session.getItem("/eXoNotification/messageInfoHome")).getNodes().getSize());
     //
-    assertEquals(0, ((Node) session.getItem("/eXoNotification/messageHome/TestPlugin/d" + yesterday)).getNodes().getSize());
-    //
-    removeChildNodes("/eXoNotification/messageHome/TestPlugin");
+    assertEquals(0, ((Node) session.getItem(pluginPath + "/d" + yesterday)).getNodes().getSize());
   }
   
   

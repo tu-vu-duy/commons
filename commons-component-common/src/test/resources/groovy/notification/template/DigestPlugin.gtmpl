@@ -1,0 +1,7 @@
+<div class="template-digest-plugin">
+<p><%=_ctx.appRes("Notification.title.DigestPlugin")%></p>
+<p><%=_ctx.appRes("Notification.title.TestResouceBundle")%></p>
+ The portal-nam $PORTAL_NAME<br/>
+ The Footer link: $FOOTER_LINK<br/>
+ The message content $DIGEST_MESSAGES_LIST<br/>
+</div>

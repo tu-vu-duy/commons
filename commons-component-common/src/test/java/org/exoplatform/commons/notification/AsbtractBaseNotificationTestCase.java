@@ -16,59 +16,69 @@
  */
 package org.exoplatform.commons.notification;
 
-import java.io.Writer;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.List;
 
 import javax.jcr.Node;
+import javax.jcr.Session;
 
-import org.exoplatform.commons.api.notification.NotificationContext;
-import org.exoplatform.commons.api.notification.model.MessageInfo;
-import org.exoplatform.commons.api.notification.model.NotificationInfo;
-import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugin;
-import org.exoplatform.commons.api.notification.plugin.config.PluginConfig;
-import org.exoplatform.commons.api.notification.plugin.config.TemplateConfig;
-import org.exoplatform.commons.api.notification.service.storage.NotificationService;
-import org.exoplatform.commons.notification.impl.setting.NotificationPluginContainer;
-import org.exoplatform.commons.notification.impl.setting.PluginSettingServiceImpl;
-import org.exoplatform.commons.testing.BaseCommonsTestCase;
+import org.exoplatform.commons.testing.BaseExoTestCase;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.ListAccess;
-import org.exoplatform.container.configuration.ConfigurationManagerImpl;
-import org.exoplatform.container.util.ContainerUtil;
-import org.exoplatform.container.xml.InitParams;
+import org.exoplatform.component.test.ConfigurationUnit;
+import org.exoplatform.component.test.ConfiguredBy;
+import org.exoplatform.component.test.ContainerScope;
+import org.exoplatform.services.jcr.RepositoryService;
+import org.exoplatform.services.jcr.core.ManageableRepository;
 import org.exoplatform.services.organization.OrganizationService;
 import org.exoplatform.services.organization.User;
-import org.exoplatform.test.MockConfigurationManagerImpl;
+import org.exoplatform.services.organization.UserHandler;
 
-public abstract class AsbtractBaseNotificationTestCase extends BaseCommonsTestCase {
+@ConfiguredBy({
+  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/exo.portal.component.portal-configuration.xml"),
+  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/exo.portal.component.test.jcr-configuration.xml"),
+  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/exo.portal.component.identity-configuration.xml"),
+  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/standalone/test-commons-configuration.xml"),
+  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/notification/exo.notification.test.configuration.xml"),
+  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/notification/exo.notification.test.jcr-configuration.xml"),
+  @ConfigurationUnit(scope = ContainerScope.PORTAL, path = "conf/notification/exo.notification.test.portal-configuration.xml")
+})
+public abstract class AsbtractBaseNotificationTestCase extends BaseExoTestCase {
 
-  protected void registerConfiguration(String configurationPath) {
-    try {
-      if (getService(NotificationService.class) == null) {
-        ConfigurationManagerImpl manager = new MockConfigurationManagerImpl(container.getPortalContext());
-        manager.addConfiguration(ContainerUtil.getConfigurationURL(configurationPath));
-        //
-        ContainerUtil.addContainerLifecyclePlugin(container, manager);
-        ContainerUtil.addComponentLifecyclePlugin(container, manager);
-        ContainerUtil.addComponents(container, manager);
-        container.start(false);
-        //
-        getService(NotificationConfiguration.class).setWorkspace("portal-test");
-        //
-        addTestPlugin();
-      }
-    } catch (Exception e) {e.printStackTrace();}
-  }
-  
+  protected Session session;
+  protected Node root;
+
   @Override
   public void setUp() throws Exception {
-    super.setUp();
     //
-    registerConfiguration("conf/standalone/test-notification-configuration.xml");
+    begin();
     //
-    addInfoForUser();
+    session = getSession();
+    root = session.getRootNode();
+    System.setProperty(CommonsUtils.CONFIGURED_DOMAIN_URL_KEY, "http://exoplatform.com");
+  }
+
+  @Override
+  public void tearDown() throws Exception {
+    root = null;
+    session.logout();
+    //
+    end();
+  }
+
+  @SuppressWarnings("unchecked")
+  public <T> T getService(Class<T> clazz) {
+    return (T) getContainer().getComponentInstanceOfType(clazz);
+  }
+  
+  public Session getSession() {
+    Session session = null;
+    try {
+      ManageableRepository repository = getService(RepositoryService.class).getCurrentRepository();
+      session = repository.getSystemSession("portal-test");
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return session;
   }
   
   protected void addLastUpdateTime(String userId) throws Exception {
@@ -76,71 +86,5 @@ public abstract class AsbtractBaseNotificationTestCase extends BaseCommonsTestCa
     rootNode.addMixin("exo:datetime");
     rootNode.setProperty("exo:lastModifiedDate", Calendar.getInstance());
     session.save();
-  }
-  
-  private void addTestPlugin() {
-    InitParams initParams = new InitParams();
-    AbstractNotificationPlugin plugin = new AbstractNotificationPlugin(initParams) {
-      
-      @Override
-      public List<PluginConfig> getPluginConfigs() {
-        PluginConfig pluginConfig = new PluginConfig();
-        pluginConfig.setPluginId(getId());
-        pluginConfig.setTemplateConfig(new TemplateConfig(getId()));
-        return Arrays.asList(pluginConfig);
-      }
-      
-      @Override
-      protected NotificationInfo makeNotification(NotificationContext ctx) {
-        return new NotificationInfo().key(getKey());
-      }
-
-      @Override
-      protected MessageInfo makeMessage(NotificationContext ctx) {
-        return new MessageInfo().body("the body").pluginId(getId()).subject("subject").to("demo@plf.com").from("root").end();
-      }
-
-      @Override
-      protected boolean makeDigest(NotificationContext ctx, Writer writer) {
-        try {
-          writer.write("The content of test plugin");
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-        return false;
-      }
-
-      @Override
-      public boolean isValid(NotificationContext ctx) {
-        return true;
-      }
-
-      @Override
-      public String getId() {
-        return "TestPlugin";
-      }
-    };
-    //
-    CommonsUtils.getService(NotificationPluginContainer.class).addPlugin(plugin);
-    PluginSettingServiceImpl pluginService = CommonsUtils.getService(PluginSettingServiceImpl.class);
-    pluginService.registerPluginConfig(plugin.getPluginConfigs().get(0));
-    pluginService.savePlugin(plugin.getId(), true);
-    PluginConfig pluginConfig = new PluginConfig();
-    pluginConfig.setPluginId("DigestDailyPlugin");
-    pluginConfig.setTemplateConfig(new TemplateConfig("DigestDailyPlugin"));
-    pluginService.registerPluginConfig(pluginConfig);
-  }
-  
-  protected void addInfoForUser() throws Exception {
-    OrganizationService organizationService = CommonsUtils.getService(OrganizationService.class);
-    ListAccess<User> list = organizationService.getUserHandler().findAllUsers();
-    //
-    User[] users = list.load(0, list.getSize());
-    for (int i = 0; i < users.length; i++) {
-      if (users[i] != null && users[i].getUserName() != null) {
-        users[i].setCreatedDate(Calendar.getInstance().getTime());
-        users[i].setEmail(users[i].getUserName() + "@plf.com");
-      }
-    }
   }
 }

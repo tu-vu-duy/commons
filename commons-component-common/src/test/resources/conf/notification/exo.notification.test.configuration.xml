@@ -1,10 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
 
+    Copyright (C) 2003-2011 eXo Platform SAS.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+-->
 <configuration
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd http://www.exoplatform.org/xml/ns/kernel_1_2.xsd"
-  xmlns="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd">
-  
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd http://www.exoplatform.org/xml/ns/kernel_1_2.xsd"
+   xmlns="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd">
+
   <component>
     <key>org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage</key>
     <type>org.exoplatform.commons.notification.impl.service.storage.NotificationDataStorageImpl</type>
@@ -32,16 +49,6 @@
   </component>
 
   <component>
-    <key>org.exoplatform.commons.api.settings.ExoFeatureService</key>
-    <type>org.exoplatform.settings.impl.ExoFeatureServiceImpl</type>
-  </component>
-
-  <component>
-    <key>org.exoplatform.services.scheduler.JobSchedulerService</key>
-    <type>org.exoplatform.commons.notification.mock.MockJobSchedulerService</type>
-  </component>
-
-  <component>
     <key>org.exoplatform.commons.api.notification.service.storage.NotificationService</key>
     <type>org.exoplatform.commons.notification.impl.service.NotificationServiceImpl</type>
   </component>
@@ -66,7 +73,18 @@
     <type>org.exoplatform.commons.notification.impl.service.template.DigestorServiceImpl</type>
   </component>
 
-	<component>
+  <component>
+    <key>org.exoplatform.commons.api.notification.service.NotificationCompletionService</key>
+    <type>org.exoplatform.commons.api.notification.service.NotificationCompletionService</type>
+    <init-params>
+      <value-param>
+        <name>async-execution</name>
+        <value>false</value>
+      </value-param>
+    </init-params>
+  </component>
+
+  <component>
 		<key>org.exoplatform.commons.api.notification.service.QueueMessage</key>
 		<type>org.exoplatform.commons.notification.impl.service.QueueMessageImpl</type>
 		<init-params>
@@ -281,7 +299,7 @@
                   <string>locale.notification.template.Notification</string>
                 </field>
                 <field name="templatePath">
-                  <string>classpath:/groovy/notification/template/provider1.gtmpl</string>
+                  <string>classpath:/groovy/notification/template/DigestPlugin.gtmpl</string>
                 </field>
               </object>
             </field>
@@ -315,7 +333,7 @@
                   <string>locale.notification.template.Notification</string>
                 </field>
                 <field name="templatePath">
-                  <string>classpath:/groovy/notification/template/provider1.gtmpl</string>
+                  <string>classpath:/groovy/notification/template/DigestPlugin.gtmpl</string>
                 </field>
               </object>
             </field>
@@ -498,5 +516,5 @@
       </init-params>
     </component-plugin>
   </external-component-plugins>
-  
+
 </configuration>

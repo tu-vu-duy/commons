@@ -26,10 +26,10 @@ import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugi
 import org.exoplatform.commons.api.notification.service.setting.PluginContainer;
 import org.exoplatform.commons.api.notification.service.template.TemplateContext;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
+import org.exoplatform.commons.notification.plugin.PluginTest;
 import org.exoplatform.commons.notification.template.TemplateUtils;
-import org.exoplatform.commons.testing.BaseCommonsTestCase;
 
-public class PluginContainerTest extends BaseCommonsTestCase {
+public class PluginContainerTest extends AsbtractBaseNotificationTestCase {
   
   private PluginContainer container;
   public PluginContainerTest() {
@@ -50,7 +50,7 @@ public class PluginContainerTest extends BaseCommonsTestCase {
   
   public void testPlugin() {
     // check existing plugin
-    NotificationKey pluginKey = new NotificationKey("Test_ID");
+    NotificationKey pluginKey = new NotificationKey(PluginTest.ID);
     AbstractNotificationPlugin plugin = container.getPlugin(pluginKey);
     assertNotNull(plugin);
     // get child
@@ -63,7 +63,7 @@ public class PluginContainerTest extends BaseCommonsTestCase {
     NotificationInfo notificationInfo = plugin.buildNotification(ctx);
     assertNotNull(notificationInfo);
     assertEquals("demo", notificationInfo.getSendToUserIds().get(0));
-    assertEquals("Test_ID", notificationInfo.getKey().getId());
+    assertEquals(PluginTest.ID, notificationInfo.getKey().getId());
     //
     ctx.setNotificationInfo(notificationInfo);
     MessageInfo messageInfo = plugin.buildMessage(ctx);
@@ -83,14 +83,23 @@ public class PluginContainerTest extends BaseCommonsTestCase {
   }
 
   public void testRenderPlugin() throws Exception {
-    TemplateContext ctx = new TemplateContext("DigestDailyPlugin", null);
-    ctx.put("FIRSTNAME", "User ROOT");
-    ctx.put("USER", "root");
-    ctx.put("ACTIVITY", "Content of Activity");
+    TemplateContext ctx = new TemplateContext("DigestDailyPlugin", "en");
+    ctx.put("FIRSTNAME", "Root");
+    ctx.put("PORTAL_NAME", "portal");
+    ctx.put("PORTAL_HOME", "portalHome");
+    ctx.put("PERIOD", "Daily");
+    ctx.put("FROM_TO", "yesterday - today");
+    String subject = TemplateUtils.processSubject(ctx);
+    
+    ctx.put("FOOTER_LINK", "http://plf.com");
+    ctx.put("DIGEST_MESSAGES_LIST", "The digest content");
+    ctx.put("HAS_ONE_MESSAGE", true);
     String s = TemplateUtils.processGroovy(ctx);
     // check process resource-bundle
-    assertEquals(true, s.indexOf("Test resource bundle.") > 0);
+    assertTrue(s.indexOf("Test resource bundle") > 0);
     // check process Groovy
-    assertEquals(true, s.indexOf("Content of Activity") > 0);
+    assertTrue(s.indexOf("The digest content") > 0);
+    // check subject
+    assertTrue(subject.indexOf("Root") > 0);
   }
 }

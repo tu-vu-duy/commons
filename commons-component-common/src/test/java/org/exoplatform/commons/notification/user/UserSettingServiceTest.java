@@ -1,4 +1,4 @@
-package org.exoplatform.settings.impl;
+package org.exoplatform.commons.notification.user;
 
 import java.util.Arrays;
 import java.util.List;
@@ -16,10 +16,7 @@ import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.ListAccess;
 import org.exoplatform.services.organization.OrganizationService;
 import org.exoplatform.services.organization.User;
-import org.junit.FixMethodOrder;
-import org.junit.runners.MethodSorters;
 
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserSettingServiceTest extends AsbtractBaseNotificationTestCase {
   private UserSettingService userSettingService;
   private ExecutorService executor;
@@ -34,18 +31,10 @@ public class UserSettingServiceTest extends AsbtractBaseNotificationTestCase {
     userSettingService = getService(UserSettingService.class);
     // init setting home
     initSettingHome();
-    //
-    ThreadFactory threadFactory = new ThreadFactory() {
-      public Thread newThread(Runnable arg0) {
-        return new Thread(arg0, "UserProfile thread");
-      }
-    };
-
-    executor = Executors.newFixedThreadPool(20, threadFactory);
   }
 
   @Override
-  protected void tearDown() throws Exception {
+  public void tearDown() throws Exception {
     super.tearDown();
   }
 
@@ -57,7 +46,7 @@ public class UserSettingServiceTest extends AsbtractBaseNotificationTestCase {
     runUpgrade();
     // after upgrade
     list = userSettingService.getDefaultDigest(0, 0, false);
-    assertEquals(10, list.size());
+    assertEquals(8, list.size());
   }
 
   public void testGetgetInstantly() throws Exception {
@@ -110,27 +99,37 @@ public class UserSettingServiceTest extends AsbtractBaseNotificationTestCase {
     }
   }
 
-  public void testAddMixingMultiThreads() throws Exception {
-    for (int i = 0; i < 50; i++) {
-      Thread.sleep(5);
-      executor.execute(new Runnable() {
-        @Override
-        public void run() {
-          try {
-            OrganizationService organizationService = CommonsUtils.getService(OrganizationService.class);
-            ListAccess<User> list = organizationService.getUserHandler().findAllUsers();
-            //
-            User[] users = list.load(0, list.getSize());
-            for (int i = 0; i < users.length; i++) {
-              userSettingService.addMixin(users[i].getUserName());
+  public void TestAddMixingMultiThreads() throws Exception {
+    ThreadFactory threadFactory = new ThreadFactory() {
+      public Thread newThread(Runnable arg0) {
+        return new Thread(arg0, "UserProfile thread");
+      }
+    };
+    executor = Executors.newFixedThreadPool(20, threadFactory);
+    try {
+      for (int i = 0; i < 50; i++) {
+        Thread.sleep(5);
+        executor.execute(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              OrganizationService organizationService = CommonsUtils.getService(OrganizationService.class);
+              ListAccess<User> list = organizationService.getUserHandler().findAllUsers();
+              //
+              User[] users = list.load(0, list.getSize());
+              for (int i = 0; i < users.length; i++) {
+                userSettingService.addMixin(users[i].getUserName());
+              }
+            } catch (Exception e) {
+              assertFalse(true);
             }
-          } catch (Exception e) {
-            assertFalse(true);
           }
-        }
-      });
+        });
+      }
+      //
+      Thread.sleep(1000);
+    } finally {
+      executor.shutdownNow();
     }
-    //
-    Thread.sleep(1000);
   }
 }
