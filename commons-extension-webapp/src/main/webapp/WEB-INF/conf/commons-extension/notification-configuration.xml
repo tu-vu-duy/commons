@@ -64,20 +64,28 @@
     <type>org.exoplatform.commons.notification.impl.service.template.DigestorServiceImpl</type>
   </component>
 
-	<component>
-		<key>org.exoplatform.commons.api.notification.service.QueueMessage</key>
-		<type>org.exoplatform.commons.notification.impl.service.QueueMessageImpl</type>
-		<init-params>
-			<value-param>
-				<name>numberOfMailPerBatch</name> <!-- Max number of mails to send in period time -->
-				<value>50</value>
-			</value-param>
-			<value-param>
-				<name>period</name><!-- The time to repeat interval call send email notification -->
-				<value>60</value>
-			</value-param>
-		</init-params>
-	</component>
+  <component>
+    <key>org.exoplatform.commons.api.notification.service.QueueMessage</key>
+    <type>org.exoplatform.commons.notification.impl.service.QueueMessageImpl</type>
+    <component-plugins>
+      <component-plugin>
+      <name>notification.plugins</name>
+      <set-method>addPlugin</set-method>
+      <type>org.exoplatform.commons.notification.impl.service.DefaultSendMessageListener</type>
+        <description>add a send direct email notification</description>
+        <init-params>
+          <value-param>
+            <name>numberOfMailPerBatch</name>
+            <value>${exo.notification.service.QueueMessage.numberOfMailPerBatch:50}</value>
+          </value-param>
+          <value-param>
+            <name>period</name>
+            <value>${exo.notification.service.QueueMessage.period:60}</value>
+          </value-param>
+        </init-params>
+      </component-plugin>
+    </component-plugins>
+  </component>
 
   <component>
     <type>org.exoplatform.commons.notification.NotificationConfiguration</type>
@@ -116,7 +124,60 @@
   <component>
     <type>org.exoplatform.commons.notification.cache.TemplateCaching</type>
   </component>
-  
+ 
+  <external-component-plugins>
+    <target-component>org.exoplatform.commons.api.notification.service.QueueMessage</target-component>    
+    <component-plugin>
+    <name>notification.plugins</name>
+    <set-method>addPlugin</set-method>
+    <type>org.exoplatform.commons.notification.impl.service.DefaultSendMessageListener</type>
+      <description>add a send direct email notification</description>
+      <init-params>
+        <value-param>
+          <name>numberOfMailPerBatch</name>
+          <value>${exo.notification.service.QueueMessage.numberOfMailPerBatch:50}</value>
+        </value-param>
+        <value-param>
+          <name>period</name>
+          <value>${exo.notification.service.QueueMessage.period:60}</value>
+        </value-param>
+      </init-params>
+    </component-plugin>
+  </external-component-plugins>
+
+<!--   
+  <external-component-plugins>
+    <target-component>org.exoplatform.commons.api.notification.service.QueueMessage</target-component>    
+    <component-plugin>
+    <name>notification.plugins</name>
+    <set-method>addPlugin</set-method>
+    <type>org.exoplatform.commons.notification.impl.service.SimpleSendMessageListener</type>
+      <description>add a send direct email notification</description>
+    </component-plugin>
+  </external-component-plugins>
+-->
+<!-- 
+  <external-component-plugins>
+    <target-component>org.exoplatform.commons.api.notification.service.QueueMessage</target-component>    
+    <component-plugin>
+    <name>notification.plugins</name>
+    <set-method>addPlugin</set-method>
+    <type>org.exoplatform.commons.notification.impl.service.InMemorySendMessageListener</type>
+      <description>add a send direct email notification</description>
+      <init-params>
+        <value-param>
+          <name>numberOfMailPerBatch</name>
+          <value>${exo.notification.service.QueueMessage.numberOfMailPerBatch:50}</value>
+        </value-param>
+        <value-param>
+          <name>period</name>
+          <value>${exo.notification.service.QueueMessage.period:60}</value>
+        </value-param>
+      </init-params>
+    </component-plugin>
+  </external-component-plugins>
+-->
+
   <external-component-plugins>
      <target-component>org.exoplatform.services.scheduler.JobSchedulerService</target-component>    
      <component-plugin>
@@ -131,7 +192,7 @@
           <property name="jobName" value="NotificationDailyJob"/>
           <property name="groupName" value="Notification"/>
           <property name="job" value="org.exoplatform.commons.notification.job.NotificationDailyJob"/>
-          <property name="expression" value="${cronJob.notification.NotificationDailyJob.expression:0 0 23 ? * *}"/><!-- Run at 11:00pm every day -->
+          <property name="expression" value="${exo.notification.NotificationDailyJob.expression:0 0 23 ? * *}"/><!-- Run at 11:00pm every day -->
         </properties-param>
       </init-params>
     </component-plugin>
@@ -151,7 +212,7 @@
           <property name="jobName" value="NotificationWeeklyJob"/>
           <property name="groupName" value="Notification"/>
           <property name="job" value="org.exoplatform.commons.notification.job.NotificationWeeklyJob"/>
-          <property name="expression" value="${cronJob.notification.NotificationWeeklyJob.expression:0 0 11 ? * SUN}"/><!-- Run at 11:00am every Sunday in every month -->
+          <property name="expression" value="${exo.notification.NotificationWeeklyJob.expression:0 0 11 ? * SUN}"/><!-- Run at 11:00am every Sunday in every month -->
         </properties-param>
       </init-params>
     </component-plugin>

@@ -21,6 +21,7 @@ import java.util.Calendar;
 import org.exoplatform.commons.api.notification.NotificationContext;
 import org.exoplatform.commons.api.notification.service.storage.NotificationService;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
+import org.exoplatform.commons.notification.impl.service.QueueMessageImpl;
 import org.exoplatform.commons.notification.job.NotificationJob;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.groovyscript.GroovyTemplate;
@@ -60,6 +61,7 @@ public class NotificationDigestJob implements Job {
         LOG.info("Starting run WeeklyJob to send weekly email notification ... ");
         notifContext.append(NotificationJob.JOB_WEEKLY, true);
       }
+      CommonsUtils.getService(QueueMessageImpl.class).clearLogs();
       CommonsUtils.getService(NotificationService.class).digest(notifContext);
       long endTime = System.currentTimeMillis();
       //last execution duration

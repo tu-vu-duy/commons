@@ -16,6 +16,10 @@
  */
 package org.exoplatform.commons.notification.impl.service;
 
+import org.exoplatform.commons.notification.impl.log.FullAuditEmailMessageLog;
+import org.exoplatform.commons.notification.impl.log.SimpleAuditEmailMessageLog;
+import org.exoplatform.container.xml.InitParams;
+import org.exoplatform.container.xml.ValueParam;
 import org.exoplatform.management.ManagementAware;
 import org.exoplatform.management.ManagementContext;
 import org.exoplatform.management.annotations.Impact;
@@ -91,7 +95,7 @@ public class SendEmailService implements ManagementAware {
     isOn = true;
     emailPerSend = 120;
     interval = 120;
-    makeJob();
+    rescheduleJob();
   }
 
   @Managed
@@ -129,7 +133,7 @@ public class SendEmailService implements ManagementAware {
   @Impact(ImpactType.READ)
   public void setNumberEmailPerSend(int emailPerSend) {
     this.emailPerSend = emailPerSend;
-    makeJob();
+    rescheduleJob();
   }
 
   @Managed
@@ -144,7 +148,7 @@ public class SendEmailService implements ManagementAware {
   @Impact(ImpactType.READ)
   public void setInterval(int interval) {
     this.interval = interval;
-    makeJob();
+    rescheduleJob();
   }
   
   @Managed
@@ -152,6 +156,69 @@ public class SendEmailService implements ManagementAware {
   @Impact(ImpactType.READ)
   public int getInterval() {
     return this.interval;
+  }
+
+  @Managed
+  @ManagedDescription("Gets the log sent emails notification.")
+  @Impact(ImpactType.READ)
+  public String getLogs() {
+    return queueMessage.getLogs();
+  }
+
+  @Managed
+  @ManagedDescription("Start DefaultSendMessageListener.")
+  @Impact(ImpactType.READ)
+  public String startDefaultSendMessage() {
+    queueMessage.addPlugin(new DefaultSendMessageListener(createInitParams()));
+    return "DefaultSendMessageListener started";
+  }
+
+  @Managed
+  @ManagedDescription("Start InMemorySendMessageListener.")
+  @Impact(ImpactType.READ)
+  public String startInMemorySendMessage() {
+    queueMessage.addPlugin(new InMemorySendMessageListener(createInitParams()));
+    return "InMemorySendMessageListener started";
+  }
+
+  @Managed
+  @ManagedDescription("Start SimpleSendMessageListener.")
+  @Impact(ImpactType.READ)
+  public String startSimpleSendMessage() {
+    queueMessage.addPlugin(new SimpleSendMessageListener());
+    return "SimpleSendMessageListener started";
+  }
+
+  @Managed
+  @ManagedDescription("Reset to use default configuration SendMessageListener.")
+  @Impact(ImpactType.READ)
+  public String resetDefaultConfigSendMessage() {
+    queueMessage.addPlugin(null);
+    return "Reset to use default SendMessageListener";
+  }
+
+  @Managed
+  @ManagedDescription("Start SimpleAuditEmailMessageLog.")
+  @Impact(ImpactType.READ)
+  public String startSimpleAuditMessageLog() {
+    queueMessage.setAuditLog(new SimpleAuditEmailMessageLog());
+    return "SimpleAuditEmailMessageLog started";
+  }
+  
+  @Managed
+  @ManagedDescription("Start FullAuditEmailMessageLog.")
+  @Impact(ImpactType.READ)
+  public String startFullAuditMessageLog() {
+    queueMessage.setAuditLog(new FullAuditEmailMessageLog());
+    return "FullAuditEmailMessageLog started";
+  }
+
+  @Managed
+  @ManagedDescription("Clear AuditEmailMessageLog.")
+  @Impact(ImpactType.READ)
+  public String clearAuditMessageLog() {
+    queueMessage.clearLogs();
+    return "Clear AuditEmailMessageLog done!";
   }
 
   @Managed
@@ -173,9 +240,24 @@ public class SendEmailService implements ManagementAware {
     return queueMessage.removeUsersSetting();
   }
   
-  private void makeJob() {
+  private void rescheduleJob() {
     if (isOn) {
-      this.queueMessage.makeJob(emailPerSend, interval * 1000);
+      this.queueMessage.rescheduleJob(emailPerSend, interval * 1000);
     }
+  }
+  
+  private InitParams createInitParams() {
+    InitParams params = new InitParams();
+    //
+    ValueParam maxToSend = new ValueParam();
+    maxToSend.setName(InMemorySendMessageListener.MAX_TO_SEND_KEY);
+    maxToSend.setValue(String.valueOf(((emailPerSend > 0) ? emailPerSend : 50)));
+    params.addParameter(maxToSend);
+
+    ValueParam intervalParam = new ValueParam();
+    intervalParam.setName(InMemorySendMessageListener.PERIOD_INTERVAL_KEY);
+    intervalParam.setValue(String.valueOf(((interval > 0) ? interval : 120)));
+    params.addParameter(intervalParam);
+    return params;
   }
 }

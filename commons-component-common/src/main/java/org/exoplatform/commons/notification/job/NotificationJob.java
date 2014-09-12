@@ -22,6 +22,7 @@ import org.exoplatform.commons.api.notification.model.ArgumentLiteral;
 import org.exoplatform.commons.api.notification.service.NotificationCompletionService;
 import org.exoplatform.commons.notification.NotificationUtils;
 import org.exoplatform.commons.notification.impl.NotificationSessionManager;
+import org.exoplatform.commons.notification.impl.service.QueueMessageImpl;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
@@ -49,10 +50,13 @@ public abstract class NotificationJob implements Job {
     if (isValid() == false) {
       return;
     }
+    final String threadName = Thread.currentThread().getName(); 
     Callable<Boolean> task = new Callable<Boolean>() {
       @Override
       public Boolean call() throws Exception {
+        String currentThread = Thread.currentThread().getName();
         try {
+          Thread.currentThread().setName("Notification_"+threadName);
           NotificationSessionManager.createSystemProvider();
           processSendNotification();
         } catch (Exception e) {
@@ -60,11 +64,13 @@ public abstract class NotificationJob implements Job {
           return false;
         } finally {
           NotificationSessionManager.closeSessionProvider();
+          Thread.currentThread().setName(currentThread);
         }
         return true;
       }
     };
     //
+    CommonsUtils.getService(QueueMessageImpl.class).clearLogs();
     CommonsUtils.getService(NotificationCompletionService.class).addTask(task);
   }
 

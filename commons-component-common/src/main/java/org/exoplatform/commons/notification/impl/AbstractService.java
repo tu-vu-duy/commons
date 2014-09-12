@@ -103,7 +103,7 @@ public abstract class AbstractService {
   /** Defines the prefix of the parent message node such as d20 */
   public static final String DAY                      = "d";
 
-  protected static Node getNotificationHomeNode(SessionProvider sProvider, String workspace) throws Exception {
+  public static Node getNotificationHomeNode(SessionProvider sProvider, String workspace) throws Exception {
     Session session = getSession(sProvider, workspace);
     Node notificationHome, rootNode = session.getRootNode();
     if (rootNode.hasNode(NOTIFICATION_HOME_NODE)) {
@@ -123,7 +123,7 @@ public abstract class AbstractService {
    * @return
    * @throws Exception
    */
-  protected Node getMessageInfoHomeNode(SessionProvider sProvider, String workspace) throws Exception {
+  public static Node getMessageInfoHomeNode(SessionProvider sProvider, String workspace) throws Exception {
     Node ntfHomeNode = getNotificationHomeNode(sProvider, workspace);
     if (ntfHomeNode.hasNode(MESSAGE_INFO_HOME_NODE) == false) {
       Node messageHome = ntfHomeNode.addNode(MESSAGE_INFO_HOME_NODE, NTF_MESSAGE_INFO_HOME);
@@ -148,8 +148,6 @@ public abstract class AbstractService {
     Node dayNode = getOrCreateMessageNode(providerNode, DAY + dayName);
     return dayNode;
   }
-  
- 
 
   /**
    * Makes the node path for MessageHome node
