@@ -35,10 +35,21 @@
 
 	<module>
 		<name>commons-CssIconFile</name>
-		<as>ckeditor</as>
+		<as>cssclass</as>
 		<script>
 			<path>/javascript/eXo/commons/CssClassIconFile.js</path>
 		</script>
+	</module>
+
+	<module>
+		<name>commons-uipermission</name>
+		<script>
+			<path>/javascript/eXo/commons/Groupselector-plugin.js</path>
+		</script>
+		<depends>
+			<module>jquery</module>	
+			<as>jQuery</as>	
+		</depends>
 	</module>
 
 	<module>
