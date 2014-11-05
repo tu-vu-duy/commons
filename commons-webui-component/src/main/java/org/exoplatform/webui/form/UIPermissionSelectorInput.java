@@ -1,5 +1,6 @@
 package org.exoplatform.webui.form;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -121,7 +122,7 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     return res;
   }
   
-  private static String getCommonLabel(String key) {
+  public static String getCommonLabel(String key) {
     try {
       return getResourceBundle().getString(key);
     } catch (Exception e) {
@@ -154,6 +155,51 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     return "";
   }
 
+  public void addValue(WebuiRequestContext context, String value) {
+    if (value_ == null || value_.trim().length() == 0) {
+      value_ = value;
+    } else {
+      value_ = value + "," + value_;
+    }
+    //
+    StringBuilder scripts = new StringBuilder();
+    scripts.append("(function(jq) {")
+           .append("var datas = ").append(buildValueJsObject(value)).append(";")
+           .append("jq(\"#wrapper-").append(getId()).append("\").groupSelector('setVal', datas);")
+           .append("})(jQuery);");
+    
+    context.getJavascriptManager().getRequireJS().require("SHARED/jquery", "jQuery")
+           .require("SHARED/commons-uipermission").addScripts(scripts.toString());
+  }
+  
+  public List<String> getDisplayValue() {
+    List<String> result = new ArrayList<String>();
+    if (value_ != null && value_.length() > 0) {
+      StringTokenizer tokenizer = new StringTokenizer(value_, ",");
+      while (tokenizer.hasMoreTokens()) {
+        String token = tokenizer.nextToken();
+        result.add(new Bean(token).getDisplay());
+      }
+    }
+    return result;
+  }
+  
+  private String buildValueJsObject(String value) {
+    StringBuilder datas = new StringBuilder("{");
+    if(value.length() > 0) {
+      StringTokenizer tokenizer = new StringTokenizer(value, ",");
+      while (tokenizer.hasMoreTokens()) {
+        String token = tokenizer.nextToken();
+        datas.append(new Bean(token).toJSObject());
+        if(tokenizer.hasMoreTokens()) {
+          datas.append(",");
+        }
+      }
+    }
+    datas.append("}");
+    return datas.toString();
+  }
+  
   @Override
   public void processRender(WebuiRequestContext context) throws Exception {
     Locale locale_ = context.getLocale();
@@ -164,10 +210,10 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     }
     //
     String value = value_;
-    if(value == null || value.length() == 0) {
-      value = defaultValue_;
+    if (value == null || value.length() == 0) {
+      value = (defaultValue_ != null) ? defaultValue_ : "";
     }
-    value = StringUtils.replace(value, "*:", "any:");
+    value = StringUtils.replace(StringUtils.replace(value, ",,", ""), "*:", "any:");
     StringBuilder writer = new StringBuilder();
     //
     writer.append("<div class=\"uneditable-input groupSelector dropdown\" id=\"wrapper-" + getId() +"\">")
@@ -200,32 +246,16 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     writer.append("</script>\n");
     //
     context.getWriter().write(writer.toString());
-    System.out.println("writer:\n\n" + writer.toString() + "\n\n");
-    //
-    StringBuilder datas = new StringBuilder("{");
-    if(value.length() > 0) {
-      StringTokenizer tokenizer = new StringTokenizer(value, ",");
-      while (tokenizer.hasMoreTokens()) {
-        String token = tokenizer.nextToken();
-        datas.append(new Bean(token).toJSObject());
-        if(tokenizer.hasMoreTokens()) {
-          datas.append(",");
-        }
-      }
-    }
-    datas.append("}");
-    System.out.println("datas:\n\n" + datas.toString() + "\n\n");
     //
     StringBuilder scripts = new StringBuilder();
     scripts.append("(function(jq) {")
            .append("var settings = jq.extend(true, {}, {}, window.eXo.webui.groupSelector.defaultSetting);")
            .append("settings.url = \"").append(getRequestURL()).append("\";")
-           .append("var datas = ").append(datas).append(";")
+           .append("var datas = ").append(buildValueJsObject(value)).append(";")
            .append("jq(\"#wrapper-").append(getId()).append("\")")
            .append(".groupSelector(settings).groupSelector('setVal', datas);")
            .append("})(jQuery);");
     //
-    System.out.println("scripts:\n\n" + scripts.toString() + "\n\n");
     context.getJavascriptManager()
            .getRequireJS().require("SHARED/jquery", "jQuery")
            .require("SHARED/commons-uipermission")
@@ -240,7 +270,7 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     private String groupId;
     
     public Bean(String id) {
-      this.id = id.trim();
+      this.id = StringUtils.replace(id.trim(), "*:", "any:");
       this.isUser = (id.indexOf("/") < 0);
       if(isUser) {
         try {
@@ -283,6 +313,19 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
                .append("}");
       }
       return builder.toString();
+    }
+
+    public String getDisplay() {
+      StringBuilder builder = new StringBuilder("<strong>");
+      if(isUser) {
+        builder.append(label);
+      } else {
+        builder.append(membershipType).append(" ")
+               .append(getCommonLabel("UIPermissionSelector.label.in"))
+               .append(" ")
+               .append(label);
+      }
+      return builder.append("</strong> (").append(id).append(")").toString();
     }
   }
 }

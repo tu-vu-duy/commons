@@ -1,0 +1,37 @@
+<%
+	String displayMode = (uicomponent.isEditMode) ? "edit" : "view";
+	List result = uicomponent.getDisplayValue();
+	def requireJS = _ctx.getRequestContext().getJavascriptManager().getRequireJS();
+	requireJS.require("SHARED/jquery", "jq").addScripts("(function(jq) {var pr = jq('#$uicomponent.id'); pr.find('a.edit-mode:first').on('click', function() {" +
+	  "pr.find('.mode').addClass(function() {if(jq(this).hasClass('edit')) { jq(this).removeClass('edit'); return 'view'; } else { jq(this).removeClass('view'); return 'edit';} })" +
+	"})})(jq)");
+	//
+%>
+<div id="$uicomponent.id" class="uiPermissionContainer">
+	<div class="mode $displayMode editable-mode" style="vertical-align:top; padding-buttom:5px">
+		<%
+			uicomponent.renderChild(uicomponent.PERMISSION_INPUT);
+		%>
+		<a class="actionIcon" href="javascript:void(0);" onclick="<%= uicomponent.event("OpenUserPopup")%>" rel="tooltip" data-placement="bottom" title="<%=_ctx.appRes("UIPermissionPopupWindow.title.UIUserSelector");%>">
+			<i class="uiIconUser uiIconLightGray"></i>
+		</a>
+		<a class="actionIcon" href="javascript:void(0);" onclick="<%= uicomponent.event("OpenRoleAndGroupPopup")%>" rel="tooltip" data-placement="bottom" title="<%=_ctx.appRes("UIPermissionPopupWindow.title.UIMemberShipSelector");%>">
+			<i class="uiIconMembership uiIconLightGray"></i>
+		</a>
+		<button class="btn addButton" onclick="<%= uicomponent.event("AddPermission")%>" type="button"><%=uicomponent.getResouceLabel("UIPermissionContainer.label.Add")%></button>
+  </div>
+  <div class="mode $displayMode view-mode">
+   <div class="list-container">
+   <%
+   	if(result.size() > 0) {
+     for(item in result) {
+       print(item);
+     }
+   	} else {
+   	 	print("<div class=\"no-assignment\">" + uicomponent.getResouceLabel("UIPermissionContainer.label.NoAssignment") + "</div>");
+   	}
+   %>
+   <a class="actionIcon uiIconEdit uiIconLightGray edit-mode" onclick="" href="javascript:void(0)" data-placement="bottom" rel="tooltip" title="" data-original-title="Edit permission"><i class="uiIconEdit uiIconLightGray"></i></a>
+   </div>
+  </div>
+</div>
