@@ -1,8 +1,6 @@
 package org.exoplatform.webui.container;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.StringTokenizer;
 
 import org.exoplatform.portal.webui.container.UIContainer;
 import org.exoplatform.web.application.RequestContext;
@@ -18,7 +16,6 @@ import org.exoplatform.webui.event.Event;
 import org.exoplatform.webui.event.Event.Phase;
 import org.exoplatform.webui.event.EventListener;
 import org.exoplatform.webui.form.UIPermissionSelectorInput;
-import org.exoplatform.webui.form.UIPermissionSelectorInput.Bean;
 import org.exoplatform.webui.organization.UIGroupMembershipSelector;
 import org.exoplatform.webui.organization.account.UIGroupSelector;
 import org.exoplatform.webui.organization.account.UIUserSelector;
@@ -47,7 +44,7 @@ import org.exoplatform.webui.organization.account.UIUserSelector;
 })
 public class UIPermissionContainer extends UIContainer {
 
-  private static final String PERMISSION_INPUT   = "permissionInput";
+  private static final String PERMISSION_INPUT   = "permission_";
 
   private static final String POPUP_WINDOW_ID    = "UIPermissionPopupWindow";
 
@@ -58,10 +55,39 @@ public class UIPermissionContainer extends UIContainer {
   private String limitedGroup = "";
   private boolean isEditMode = false;
 
-  public UIPermissionContainer() {
-    setId("UIPermissionContainer");
-    UIPermissionSelectorInput input = new UIPermissionSelectorInput(PERMISSION_INPUT, PERMISSION_INPUT, null);
-    addChild(input);
+  public UIPermissionContainer() throws Exception {
+    addChild(UIPopupContainer.class, null,null).setId("UIPermissionPopupContainer");
+  }
+
+  public UIPermissionContainer initContainer(String id, String requestURL) {
+    super.setId(id);
+    getChild(UIPopupContainer.class).setId("UIPermissionPopupContainer_" + id);
+    if (getUIPermissionSelectorInput() == null) {
+      addChild(new UIPermissionSelectorInput(PERMISSION_INPUT + id, PERMISSION_INPUT + id, null));
+    }
+    return setRequestURL(requestURL);
+  }
+
+  public UIPermissionContainer setValue(String value) {
+    getUIPermissionSelectorInput().setValue(value);
+    return this;
+  }
+
+  public UIPermissionContainer setRequestURL(String requestURL) {
+    if (requestURL != null && requestURL.length() > 0) {
+      getUIPermissionSelectorInput().setRequestURL(requestURL);
+    }
+    return this;
+  }
+
+  @Override
+  public UIPermissionContainer setId(String id) {
+    return initContainer(id, null);
+  }
+
+  public UIPermissionContainer setLimitGroupId(String limitedGroup) {
+    this.limitedGroup = limitedGroup;
+    return this;
   }
 
   public String getLimitGroupId() {
@@ -82,11 +108,6 @@ public class UIPermissionContainer extends UIContainer {
 
   public List<String> getDisplayValue() {
     return getUIPermissionSelectorInput().getDisplayValue();
-  }
-
-  public UIPermissionContainer setValue(String value) {
-    getUIPermissionSelectorInput().setValue(value);
-    return this;
   }
 
   private static void closePopup(UIPopupWindow popupWindow) {
