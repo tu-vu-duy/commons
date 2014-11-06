@@ -2,51 +2,45 @@ package org.exoplatform.webui.container;
 
 import java.util.List;
 
-import org.exoplatform.portal.webui.container.UIContainer;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 import org.exoplatform.web.application.RequestContext;
 import org.exoplatform.webui.application.WebuiRequestContext;
 import org.exoplatform.webui.config.annotation.ComponentConfig;
-import org.exoplatform.webui.config.annotation.ComponentConfigs;
 import org.exoplatform.webui.config.annotation.EventConfig;
-import org.exoplatform.webui.core.UIPopupContainer;
+import org.exoplatform.webui.core.UIContainer;
 import org.exoplatform.webui.core.UIPopupWindow;
-import org.exoplatform.webui.core.UIPortletApplication;
 import org.exoplatform.webui.core.UITree;
+import org.exoplatform.webui.core.lifecycle.UIContainerLifecycle;
 import org.exoplatform.webui.event.Event;
-import org.exoplatform.webui.event.Event.Phase;
 import org.exoplatform.webui.event.EventListener;
+import org.exoplatform.webui.form.UIForm;
 import org.exoplatform.webui.form.UIPermissionSelectorInput;
 import org.exoplatform.webui.organization.UIGroupMembershipSelector;
 import org.exoplatform.webui.organization.account.UIGroupSelector;
 import org.exoplatform.webui.organization.account.UIUserSelector;
 
 
-@ComponentConfigs({
-  @ComponentConfig(
-     template = "classpath:groovy/forum/common/UIPermissionContainer.gtmpl",
-     events = { 
-        @EventConfig(listeners = UIPermissionContainer.OpenUserPopupActionListener.class),
-        @EventConfig(listeners = UIPermissionContainer.OpenRoleAndGroupPopupActionListener.class),
-        @EventConfig(listeners = UIPermissionContainer.AddPermissionActionListener.class)
-     }
-  ),
-  
-  @ComponentConfig(
-     id = "UIPermissionPopupWindow",
-     type = UIPopupWindow.class,
-     template = "system:/groovy/webui/core/UIPopupWindow.gtmpl",
-     events = {
-       @EventConfig(listeners = UIPermissionContainer.ClosePopupActionListener.class, name = "ClosePopup"),
-       @EventConfig(listeners = UIPermissionContainer.AddActionListener.class, name = "Add", phase = Phase.DECODE),
-       @EventConfig(listeners = UIPermissionContainer.ClosePopupActionListener.class, name = "Close")
-     }
-  )
-})
+@ComponentConfig(
+   template = "classpath:groovy/webui/commons/UIPermissionContainer.gtmpl",
+   events = { 
+      @EventConfig(listeners = UIPermissionContainer.OpenUserPopupActionListener.class),
+      @EventConfig(listeners = UIPermissionContainer.OpenRoleAndGroupPopupActionListener.class),
+      @EventConfig(listeners = UIPermissionContainer.AddPermissionActionListener.class)
+   }
+)
 public class UIPermissionContainer extends UIContainer {
+  protected static Log        LOG                = ExoLogger.getLogger(UIPermissionContainer.class);
 
   private static final String PERMISSION_INPUT   = "permission_";
 
   private static final String POPUP_WINDOW_ID    = "UIPermissionPopupWindow";
+
+  private static final String POPUP_CONTAINER_ID = "UIPermissionPopupContainer";
+
+  private static final String USER_SELECTOR_ID   = "UIUserSelector";
+
+  private static final String GROUP_SELECTOR_ID  = "UIMemberShipSelector";
 
   final private static String TREE_GROUP_ID      = "UITreeGroupSelector";
 
@@ -56,16 +50,38 @@ public class UIPermissionContainer extends UIContainer {
   private boolean isEditMode = false;
 
   public UIPermissionContainer() throws Exception {
-    addChild(UIPopupContainer.class, null,null).setId("UIPermissionPopupContainer");
   }
 
-  public UIPermissionContainer initContainer(String id, String requestURL) {
+  public UIPermissionContainer initContainer(String id, String requestURL, String defaultValue) {
     super.setId(id);
-    getChild(UIPopupContainer.class).setId("UIPermissionPopupContainer_" + id);
+    //
     if (getUIPermissionSelectorInput() == null) {
-      addChild(new UIPermissionSelectorInput(PERMISSION_INPUT + id, PERMISSION_INPUT + id, null));
+      addChild(new UIPermissionSelectorInput(PERMISSION_INPUT + id, PERMISSION_INPUT + id, defaultValue));
     }
+    //
     return setRequestURL(requestURL);
+  }
+
+  private UIPermissionPopupContainer getPopupContainer(WebuiRequestContext context) {
+    UIForm uiForm = getAncestorOfType(UIForm.class);
+    UIContainer uiContainer = null;
+    if (uiForm.getAncestorOfType(UIPopupWindow.class) != null) {
+      uiContainer = uiForm.getAncestorOfType(UIPopupWindow.class).getParent();
+    } else {
+      uiContainer = uiForm.getParent();
+    }
+    try {
+      UIPermissionPopupContainer pContainer = uiContainer.getChildById(POPUP_CONTAINER_ID);
+      if (pContainer == null) {
+        pContainer = uiContainer.addChild(UIPermissionPopupContainer.class, null, POPUP_CONTAINER_ID);
+        pContainer.getChild(UIPopupWindow.class).setId(POPUP_WINDOW_ID);
+        context.addUIComponentToUpdateByAjax(uiContainer);
+      }
+      return pContainer;
+    } catch (Exception e) {
+      LOG.error("Failed to add UIPopupContainer ", e);
+    }
+    return null;
   }
 
   public UIPermissionContainer setValue(String value) {
@@ -82,7 +98,7 @@ public class UIPermissionContainer extends UIContainer {
 
   @Override
   public UIPermissionContainer setId(String id) {
-    return initContainer(id, null);
+    return initContainer(id, null, null);
   }
 
   public UIPermissionContainer setLimitGroupId(String limitedGroup) {
@@ -110,6 +126,11 @@ public class UIPermissionContainer extends UIContainer {
     return getUIPermissionSelectorInput().getDisplayValue();
   }
 
+  protected String getAddActionUrl() throws Exception {
+    String action = event("AddPermission");
+    return action.replace("javascript:ajaxGet('", "").replace("')", "&" + OBJECTID + "=");
+  }
+  
   private static void closePopup(UIPopupWindow popupWindow) {
     popupWindow.setUIComponent(null);
     popupWindow.setShow(false);
@@ -123,6 +144,10 @@ public class UIPermissionContainer extends UIContainer {
     public void execute(Event<UIPermissionContainer> event) throws Exception {
       UIPermissionContainer panel = event.getSource();
       panel.isEditMode = false;
+      String objectId = event.getRequestContext().getRequestParameter(OBJECTID);
+      LOG.debug("objectId " + objectId);
+      panel.setValue(objectId);
+      //
       event.getRequestContext().addUIComponentToUpdateByAjax(panel);
     }
   }
@@ -132,19 +157,15 @@ public class UIPermissionContainer extends UIContainer {
     public void execute(Event<UIPermissionContainer> event) throws Exception {
       UIPermissionContainer permissionPanel = event.getSource();
 
-      UIPopupContainer uiPopupContainer = permissionPanel.getAncestorOfType(UIPopupContainer.class);
+      UIPermissionPopupContainer uiPopupContainer = permissionPanel.getPopupContainer(event.getRequestContext());
+      uiPopupContainer.setCurrentContainerId(permissionPanel.getId());
+      UIPopupWindow uiPopupWindow = uiPopupContainer.getChildById(POPUP_WINDOW_ID);
       UIGroupSelector uiGroupSelector = uiPopupContainer.findFirstComponentOfType(UIGroupSelector.class);
       if (uiGroupSelector != null) {
-        UIPopupWindow popupWindow = uiGroupSelector.getAncestorOfType(UIPopupWindow.class);
-        closePopup(popupWindow);
-      }
-
-      UIPopupWindow uiPopupWindow = uiPopupContainer.getChildById(POPUP_WINDOW_ID);
-      if (uiPopupWindow == null){
-        uiPopupWindow = uiPopupContainer.addChild(UIPopupWindow.class, POPUP_WINDOW_ID, POPUP_WINDOW_ID);
+        closePopup(uiPopupWindow);
       }
       //
-      UIUserSelector uiUserSelector = uiPopupContainer.createUIComponent(UIUserSelector.class, null, "UIUserSelector");
+      UIUserSelector uiUserSelector = uiPopupContainer.createUIComponent(UIUserSelector.class, null, USER_SELECTOR_ID);
       uiUserSelector.setShowSearch(true);
       uiUserSelector.setShowSearchUser(true);
       uiUserSelector.setShowSearchGroup(false);
@@ -163,20 +184,20 @@ public class UIPermissionContainer extends UIContainer {
     public void execute(Event<UIPermissionContainer> event) throws Exception {
       UIPermissionContainer permissionPanel = event.getSource();
 
-      UIPopupContainer uiPopupContainer = permissionPanel.getAncestorOfType(UIPopupContainer.class);
+      UIPermissionPopupContainer uiPopupContainer = permissionPanel.getPopupContainer(event.getRequestContext());
+      uiPopupContainer.setCurrentContainerId(permissionPanel.getId());
+      UIPopupWindow uiPopupWindow = uiPopupContainer.getChildById(POPUP_WINDOW_ID);
+      
       UIUserSelector user = uiPopupContainer.findFirstComponentOfType(UIUserSelector.class);
       if (user != null) {
-        UIPopupWindow popupWindow = user.getAncestorOfType(UIPopupWindow.class);
-        closePopup(popupWindow);
+        closePopup(uiPopupWindow);
       }
-
-      UIPopupWindow uiPopupWindow = uiPopupContainer.getChild(UIPopupWindow.class);
-
       //
-      UIGroupMembershipSelector group = uiPopupContainer.createUIComponent(UIGroupMembershipSelector.class, null, "UIMemberShipSelector");
+      UIGroupMembershipSelector group = uiPopupContainer.createUIComponent(UIGroupMembershipSelector.class, null,
+                                                                           GROUP_SELECTOR_ID + permissionPanel.getId());
       group.getChild(UITree.class).setId(TREE_GROUP_ID);
       group.getChild(org.exoplatform.webui.core.UIBreadcumbs.class).setId(BREADCUMB_GROUP_ID);
-
+      //
       uiPopupWindow.setUIComponent(group);
       uiPopupWindow.setShow(true);
       uiPopupWindow.setWindowSize(600, 0);
@@ -186,28 +207,10 @@ public class UIPermissionContainer extends UIContainer {
     }
   }
 
-  private UIPermissionContainer addValue(WebuiRequestContext context, String values) {
+  public UIPermissionContainer addValue(WebuiRequestContext context, String values) {
     getUIPermissionSelectorInput().addValue(context, values);
     return this;
   }
 
-  public static class AddActionListener extends EventListener<UIUserSelector> {
-    @Override
-    public void execute(Event<UIUserSelector> event) throws Exception {
-      UIUserSelector uiUserSelector = event.getSource();
-      String values = uiUserSelector.getSelectedUsers();
-      UIPortletApplication portlet = uiUserSelector.getAncestorOfType(UIPortletApplication.class);
-      UIPermissionContainer uiPermission = portlet.findFirstComponentOfType(UIPermissionContainer.class);
-      uiPermission.addValue(event.getRequestContext(), values);
-      //
-      closePopup((UIPopupWindow) uiUserSelector.getParent());
-    }
-  }
-
-  public static class ClosePopupActionListener extends EventListener<UIPopupWindow> {
-    public void execute(Event<UIPopupWindow> event) throws Exception {
-      UIPopupWindow popupWindow = event.getSource();
-      closePopup(popupWindow);
-    }
-  }
+  
 }

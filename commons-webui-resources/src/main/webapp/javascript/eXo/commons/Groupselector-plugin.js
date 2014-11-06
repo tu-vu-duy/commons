@@ -1,4 +1,3 @@
-
 (function($, undefined) {
 
   if (!window.location.origin) { // Some browsers (mainly IE) does not have this property, so we need to build it manually...
@@ -188,7 +187,7 @@
           $(this).parents('.uiMention:first').find('span:first').html($(this).text());
           var parent = $(this).parents('.membership:first');//
           var oldid = parent.data('id');
-          parent.data('id', $(this).data('id') + oldid.substring(oldid.indexOf(':') + 1));
+          parent.data('id', $(this).data('id') + oldid.substring(oldid.indexOf(':')));
           //
           var gLabel = groupList[oldid].group;
           delete groupList[oldid];
@@ -486,10 +485,16 @@
     
     function showAutocompleteMenu() {
       jwrapper.addClass('open');
+      if(jwrapper.parents('.UIPopupWindow').length > 0) {
+        jwrapper.css('position', 'absolute');
+      }
     }
 
     function hideAutocompleteMenu() {
       jwrapper.removeClass('open');
+      if(jwrapper.parents('.UIPopupWindow').length > 0) {
+        jwrapper.css('position', '');
+      }
     }
 
     function clearAutocompleteMenu() {
@@ -511,6 +516,15 @@
         jinput = jwrapper.find('input.target-input:first');
         jwInput = jwrapper.find('.w-input');
         jtarget = jwrapper.find('input#' + jwrapper.attr('id').replace('wrapper-', '') + ':first');
+        //
+        var pr = jwrapper.parents('.groupSelector-container:first');
+        jwrapper.css({
+          'min-height' : pr.css('min-height'),
+          'min-width' : pr.css('min-width'),
+          'max-width' : pr.css('max-width'),
+          'width' : (pr.css('width') > 0 ? pr.css('width') : 'auto')
+        });
+        //
         jwrapper.on('click', function() {
           jwInput.hide();
           jinput.show().trigger('focus');

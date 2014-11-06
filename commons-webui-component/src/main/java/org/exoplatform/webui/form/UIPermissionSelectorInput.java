@@ -1,5 +1,7 @@
 package org.exoplatform.webui.form;
 
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -126,7 +128,8 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     try {
       return getResourceBundle().getString(key);
     } catch (Exception e) {
-      return key;
+      LOG.warn("Could not find key for " + key + " in " + res + " for locale " + res.getLocale());
+      return (key.indexOf(".") > 0) ? key.substring(key.lastIndexOf(".") + 1) : key;
     }
   }
   
@@ -216,33 +219,38 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     value = StringUtils.replace(StringUtils.replace(value, ",,", ""), "*:", "any:");
     StringBuilder writer = new StringBuilder();
     //
-    writer.append("<div class=\"uneditable-input groupSelector dropdown\" id=\"wrapper-" + getId() +"\">")
-           .append("  <input type=\"hidden\" id=\"" + getId() +"\" name=\"" + getId() +"\" value=\"" + value +"\"/>")
-           .append("  <span class=\"w-input\"></span>")
-           .append("  <input type=\"text\" class=\"target-input\" name=\"target-input\"/>")
-           .append("</div>");
+    Writer w = new StringWriter();
+    renderHTMLAttributes(w);
+    //
+    writer.append("<div class=\"groupSelector-container\"").append(w.toString()).append(">")
+          .append("  <div class=\"uneditable-input groupSelector dropdown\" id=\"wrapper-" + getId() +"\">")
+          .append("    <input type=\"hidden\" id=\"" + getId() +"\" name=\"" + getId() +"\" value=\"" + value +"\"/>")
+          .append("    <span class=\"w-input\"></span>")
+          .append("    <input type=\"text\" class=\"target-input\" name=\"target-input\"/>")
+          .append("  </div>")
+          .append("</div>");
 
     writer.append("<script type=\"text/javascript\">\n");
     writer.append("window.eXo = window.eXo || {};\n")
-           .append("window.eXo.webui = window.eXo.webui || {};\n")
-           .append("if(!window.eXo.webui.groupSelector) {\n")
-           .append("  window.eXo.webui.groupSelector = {};\n")
-           .append("  var memberships_ = {")
-           .append(buildMembershipObject())
-           .append("  };")
-           .append("  var defaultSetting = {\n")
-           .append("   url : \"\",\n")
-           .append("   memberships : memberships_,\n")
-           .append("   i18n : {\n")
-           .append("     inLabel : \"").append(getCommonLabel("UIPermissionSelector.label.in")).append("\",\n")
-           .append("     anyLabel : \"").append(getCommonLabel("UIPermissionSelector.membership.any")).append("\",\n")
-           .append("     userLabel : \"").append(getCommonLabel("UIPermissionSelector.label.Users")).append("\",\n")
-           .append("     groupLabel : \"").append(getCommonLabel("UIPermissionSelector.label.Groups")).append("\",\n")
-           .append("     noMatchLabel : \"").append(getCommonLabel("UIPermissionSelector.label.noMatch")).append("\"\n")
-           .append("   }\n")
-           .append(" };\n")
-           .append(" window.eXo.webui.groupSelector.defaultSetting = defaultSetting;\n")
-           .append("}\n");
+          .append("window.eXo.webui = window.eXo.webui || {};\n")
+          .append("if(!window.eXo.webui.groupSelector) {\n")
+          .append("  window.eXo.webui.groupSelector = {};\n")
+          .append("  var memberships_ = {")
+          .append(buildMembershipObject())
+          .append("  };")
+          .append("  var defaultSetting = {\n")
+          .append("   url : \"\",\n")
+          .append("   memberships : memberships_,\n")
+          .append("   i18n : {\n")
+          .append("     inLabel : \"").append(getCommonLabel("UIPermissionSelector.label.in")).append("\",\n")
+          .append("     anyLabel : \"").append(getCommonLabel("UIPermissionSelector.membership.any")).append("\",\n")
+          .append("     userLabel : \"").append(getCommonLabel("UIPermissionSelector.label.Users")).append("\",\n")
+          .append("     groupLabel : \"").append(getCommonLabel("UIPermissionSelector.label.Groups")).append("\",\n")
+          .append("     noMatchLabel : \"").append(getCommonLabel("UIPermissionSelector.label.noMatch")).append("\"\n")
+          .append("   }\n")
+          .append(" };\n")
+          .append(" window.eXo.webui.groupSelector.defaultSetting = defaultSetting;\n")
+          .append("}\n");
     writer.append("</script>\n");
     //
     context.getWriter().write(writer.toString());
@@ -270,23 +278,27 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     private String groupId;
     
     public Bean(String id) {
-      this.id = StringUtils.replace(id.trim(), "*:", "any:");
+      this.id = id.trim();
       this.isUser = (id.indexOf("/") < 0);
-      if(isUser) {
+      buildData();
+    }
+    
+    private void buildData() {
+      if (isUser) {
         try {
           User user = getOrganizationService().getUserHandler().findUserByName(this.id);
           label = user.getDisplayName();
-          if(label == null || label.trim().length() == 0) {
-            label  = user.getFirstName() + " " + user.getLastName();
+          if (label == null || label.trim().length() == 0) {
+            label = user.getFirstName() + " " + user.getLastName();
           }
         } catch (Exception e) {
           this.label = id;
         }
       } else {
-        membershipType = getMembershipType(id.substring(0, id.indexOf(":")));
-        groupId = id.substring(id.indexOf(":") + 1);
+        membershipType = getMembershipType(this.id.substring(0, this.id.indexOf(":")));
+        groupId = this.id.substring(this.id.indexOf(":") + 1);
         Map<String, String> membershipData = buildMembershipData();
-        if(membershipData.containsKey(membershipType)) {
+        if (membershipData.containsKey(membershipType)) {
           membershipType = membershipData.get(membershipType);
         }
         try {
