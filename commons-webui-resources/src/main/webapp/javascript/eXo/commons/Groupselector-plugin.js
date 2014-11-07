@@ -1,3 +1,4 @@
+
 (function($, undefined) {
 
   if (!window.location.origin) { // Some browsers (mainly IE) does not have this property, so we need to build it manually...
@@ -180,7 +181,7 @@
     
     function onClickDropDownMembership(evt) {
       var jitem = $(this).parents('.membership');
-      var lis = jitem.find('ul.dropdown-menu').find('li');
+      var lis = openMenu(jitem.find('ul.dropdown-menu')).find('li');
       if(lis.length == 1) {
         lis = jitem.find('ul.dropdown-menu').html(ulWrapper.html()).find('li');
         lis.on('click', function(e) {
@@ -364,9 +365,8 @@
     function onInputPaste(e) {
       console.log('onInputPaste');
     }
-    
+
     function populateDropdown(query, datas) {
-      //<li class="data" data-id="$id" data-type="$type" data-display="$display">$display</li>
       //datas = [{'demo' : {name : 'Demo gtn', avatar: 'avatar url'} }, {'/platform/user':  {name : 'Platform user', avatar: 'avatar url'}} ]
       var groupMenus = {};
       var userMenus = {};
@@ -380,25 +380,24 @@
       var isArray = $.isArray(datas);
       if(isArray) {
         $.each(datas, function(index){
-          dataInfo = $.extend(true, {}, dataInfo, this);
+          dataInfo[this.id.replace('@', '')] = this;
+          //dataInfo = $.extend(true, {}, dataInfo, this);
         });
       }
       //
       $.each(dataInfo, function(key){
         if(key.indexOf('/') >= 0) {
-          groupMenus[key] = datas[key];
+          groupMenus[key] = dataInfo[key];
         } else {
-          userMenus[key] = datas[key];
+          userMenus[key] = dataInfo[key];
         }
       });
-      
       //
       autocompleteItems(userMenus, 'user', settings.i18n.userLabel);
       //
       autocompleteItems(groupMenus, 'group', settings.i18n.groupLabel);
       // apply behavior menu
       ulComplete.find('li.data:first').addClass('active');
-      
       //
       return true;
     }
@@ -412,17 +411,23 @@
         $.each(datas, function(key){
           var info = datas[key];
           var li = settings.templates.autocompleteListItem.replace('$id', key).replace(/\$display/g, info.name);
-          if (settings.showAvatars && info.name) {
-            if (info.avatar) {
-              li = li.replace('$avatar','<i class="avatarSmall"><img src="' + info.name + '"/></i> ');
-            } else {
-              li = li.replace('$avatar','<i class="avatarSmall"><img src="/social-resources/skin/images/ShareImages/UserAvtDefault.png"/></i> ');
+          if (settings.showAvatars) {
+            var avatar = '<i class="avatarMini"><img src="/social-resources/skin/images/ShareImages/UserAvtDefault.png"/></i> ';
+            if (info.avatar && info.avatar.length > 0) {
+              avatar = '<i class="avatarMini"><img src="' + info.avatar + '"/></i> ';
+            } else  if(type === 'group') {
+              avatar = '<i class="uiIconGroup uiIconLightGray"></i> ';
             }
+            li = li.replace('$avatar', avatar);
           }
-          li = li.replace()
           li = $(li.replace('$type', type ));
+          //
+          ulComplete.append(li);
+          //
           li.on('mousedown', function(evt) {
+            evt.stopPropagation();
             applyCompleteItem($(this));
+            $(this).parents('.uiMention:first').removeClass('open');
           }).on('mouseover', function(evt) {
             var active = ulComplete.find('li.active:first');
             if(this !== active[0]) {
@@ -430,8 +435,6 @@
               $(this).addClass('active');
             }
           });
-          //
-          ulComplete.append(li);
         });
       }
     }
@@ -470,6 +473,10 @@
         }
       });
       */
+      if (query == '') {
+    	  populateDropdown('', {});
+    	  return;
+      }
       if(settings.url && settings.url.length > 0) {
         var url = settings.url;
         if(url.indexOf(window.location.origin) < 0) {
@@ -483,18 +490,33 @@
       }
     }
     
+
     function showAutocompleteMenu() {
-      jwrapper.addClass('open');
-      if(jwrapper.parents('.UIPopupWindow').length > 0) {
-        jwrapper.css('position', 'absolute');
+      if (jwrapper.find('.open').length == 0) {
+        jwrapper.addClass('open');
+        if (jwrapper.parents('.UIPopupWindow').length > 0) {
+          openMenu(jwrapper.find('.autocomplete-menu'));
+        }
       }
+    }
+    
+
+    function openMenu(menu) {
+      if (jwrapper.parents('.UIPopupWindow').length > 0) {
+        var delta = 6;
+        var dropdown = menu.parents('.dropdown:first').addClass('static');
+        if (dropdown[0] !== jwrapper[0]) {
+          jwrapper.addClass('static');
+          delta = 0;
+        }
+        menu.css('top', (dropdown.position().top + dropdown.height() + delta))
+            .css('left', (dropdown.position().left));
+      }
+      return menu;
     }
 
     function hideAutocompleteMenu() {
       jwrapper.removeClass('open');
-      if(jwrapper.parents('.UIPopupWindow').length > 0) {
-        jwrapper.css('position', '');
-      }
     }
 
     function clearAutocompleteMenu() {
@@ -519,21 +541,23 @@
         //
         var pr = jwrapper.parents('.groupSelector-container:first');
         jwrapper.css({
-          'min-height' : pr.css('min-height'),
+          'min-height' : pr.css('min-height'), 
           'min-width' : pr.css('min-width'),
           'max-width' : pr.css('max-width'),
           'width' : (pr.css('width') > 0 ? pr.css('width') : 'auto')
         });
-        //
         jwrapper.on('click', function() {
           jwInput.hide();
           jinput.show().trigger('focus');
           jinput[0].focus();
           jwrapper.addClass('uneditable-input-focus');
           if(ulComplete.find('li').length > 1) {
-            showAutocompleteMenu();
+            var T = setTimeout(function() {
+              showAutocompleteMenu();
+              clearTimeout(T);
+            }, 100);
           }
-        }).focusout(function() {
+        }).focusout(function(e) {
           if(jinput.val().trim().length == 0) {
             jinput.hide();
             jwInput.show();

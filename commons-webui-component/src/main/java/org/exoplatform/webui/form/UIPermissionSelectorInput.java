@@ -14,6 +14,9 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.StringTokenizer;
 
+import javax.portlet.MimeResponse;
+import javax.portlet.ResourceURL;
+
 import org.apache.commons.lang.StringUtils;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.services.log.ExoLogger;
@@ -141,7 +144,6 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     super(name, bindingExpression, String.class);
     this.defaultValue_ = defaultValue;
   }
-
   
   @Override
   public void decode(Object input, WebuiRequestContext context) {
@@ -154,7 +156,6 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
   }
   
   public String buildDataJson() {
-    
     return "";
   }
 
@@ -168,7 +169,8 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     StringBuilder scripts = new StringBuilder();
     scripts.append("(function(jq) {")
            .append("var datas = ").append(buildValueJsObject(value)).append(";")
-           .append("jq(\"#wrapper-").append(getId()).append("\").groupSelector('setVal', datas);")
+           .append("var thizz = jq(\"#wrapper-").append(getId()).append("\");")
+           .append("if(thizz.data('groupSelector')){ thizz.groupSelector('setVal', datas); }")
            .append("})(jQuery);");
     
     context.getJavascriptManager().getRequireJS().require("SHARED/jquery", "jQuery")
@@ -203,6 +205,19 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     return datas.toString();
   }
   
+  public String createRerveResourceURL(WebuiRequestContext context) {
+    try {
+      MimeResponse res = context.getResponse();
+      ResourceURL rsURL = res.createResourceURL();
+      rsURL.setResourceID(getId());
+      String url = rsURL.toString() + "&q=";
+      //
+      return url;
+    } catch (Exception e) {
+      return "";
+    }
+  }
+  
   @Override
   public void processRender(WebuiRequestContext context) throws Exception {
     Locale locale_ = context.getLocale();
@@ -210,6 +225,10 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
       locale = locale_;
       res = null;
       membershipData = null;
+    }
+    String requestUrl = getRequestURL();
+    if (requestUrl == null || requestUrl.length() == 0) {
+      requestUrl = createRerveResourceURL(context);
     }
     //
     String value = value_;
@@ -258,7 +277,7 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     StringBuilder scripts = new StringBuilder();
     scripts.append("(function(jq) {")
            .append("var settings = jq.extend(true, {}, {}, window.eXo.webui.groupSelector.defaultSetting);")
-           .append("settings.url = \"").append(getRequestURL()).append("\";")
+           .append("settings.url = \"").append(requestUrl).append("\";")
            .append("var datas = ").append(buildValueJsObject(value)).append(";")
            .append("jq(\"#wrapper-").append(getId()).append("\")")
            .append(".groupSelector(settings).groupSelector('setVal', datas);")

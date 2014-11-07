@@ -1,9 +1,16 @@
 package org.exoplatform.webui.container;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import javax.portlet.MimeResponse;
+import javax.portlet.ResourceRequest;
+
+import org.exoplatform.commons.utils.ListAccess;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
+import org.exoplatform.services.organization.Group;
+import org.exoplatform.services.organization.User;
 import org.exoplatform.web.application.RequestContext;
 import org.exoplatform.webui.application.WebuiRequestContext;
 import org.exoplatform.webui.config.annotation.ComponentConfig;
@@ -11,14 +18,19 @@ import org.exoplatform.webui.config.annotation.EventConfig;
 import org.exoplatform.webui.core.UIContainer;
 import org.exoplatform.webui.core.UIPopupWindow;
 import org.exoplatform.webui.core.UITree;
-import org.exoplatform.webui.core.lifecycle.UIContainerLifecycle;
 import org.exoplatform.webui.event.Event;
 import org.exoplatform.webui.event.EventListener;
 import org.exoplatform.webui.form.UIForm;
 import org.exoplatform.webui.form.UIPermissionSelectorInput;
-import org.exoplatform.webui.organization.UIGroupMembershipSelector;
-import org.exoplatform.webui.organization.account.UIGroupSelector;
-import org.exoplatform.webui.organization.account.UIUserSelector;
+import org.exoplatform.webui.form.user.UIGroupSelector;
+import org.exoplatform.webui.form.user.UISelector;
+import org.exoplatform.webui.form.user.UIUserSelector;
+import org.exoplatform.webui.form.user.UserHelper;
+import org.exoplatform.webui.form.user.UserHelper.FilterType;
+import org.exoplatform.webui.form.user.UserHelper.UserFilter;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 
 @ComponentConfig(
@@ -29,7 +41,7 @@ import org.exoplatform.webui.organization.account.UIUserSelector;
       @EventConfig(listeners = UIPermissionContainer.AddPermissionActionListener.class)
    }
 )
-public class UIPermissionContainer extends UIContainer {
+public class UIPermissionContainer extends UIContainer implements UISelector<String> {
   protected static Log        LOG                = ExoLogger.getLogger(UIPermissionContainer.class);
 
   private static final String PERMISSION_INPUT   = "permission_";
@@ -47,11 +59,126 @@ public class UIPermissionContainer extends UIContainer {
   final private static String BREADCUMB_GROUP_ID = "BreadcumbGroupSelector";
   
   private String limitedGroup = "";
-  private boolean isEditMode = false;
+  protected boolean isEditMode = false;
 
   public UIPermissionContainer() throws Exception {
   }
 
+  @Override
+  public String currentSelected() {
+    return getValue();
+  }
+
+  public static void buildServeResourceData(WebuiRequestContext context) throws Exception {
+    ResourceRequest req = context.getRequest();
+    String permissionID = req.getResourceID();
+    String key = req.getParameter("q");
+    //
+    MimeResponse res = context.getResponse();
+    res.setContentType("text/json");
+    if (UserHelper.isEmpty(permissionID) || UserHelper.isEmpty(key)) {
+      res.getWriter().write("[]");
+      return;
+    }
+    UIPermissionContainer container = context.getUIApplication().findComponentById(permissionID).getParent();
+    if (container != null) {
+      JSONArray jsChilds = new JSONArray();
+      jsChilds = concatArray(container.filterUser(key, 10), container.filterGroup(key, 10));
+      res.getWriter().write(jsChilds.toString());
+    }
+  }
+  
+  public JSONArray filterUser(String key, int limit) throws Exception {
+    if (limit == 0) {
+      limit = 10;
+    }
+    ListAccess<User> listAccess = UserHelper.searchUser(new UserFilter(key, FilterType.ALL).setGroupId(getLimitGroupId()));
+    int maxSize = listAccess.getSize();
+    if (limit > maxSize) {
+      limit = maxSize;
+    }
+    JSONArray jsChilds = new JSONArray();
+    User[] users_ = listAccess.load(0, limit);
+    for (int i = 0; i < users_.length; i++) {
+      jsChilds.put(toJson(users_[i]));
+    }
+    return jsChilds;
+  }
+
+  public JSONArray filterGroup(String key, int limit) throws Exception {
+    if (limit == 0) {
+      limit = 10;
+    }
+    List<Group> groups = new ArrayList<Group>();
+    if (!UserHelper.isEmpty(limitedGroup)) {
+      Group pr = UserHelper.getGroupHandler().findGroupById(limitedGroup);
+      groups.add(pr);
+      groups.addAll(UserHelper.findGroups(pr));
+    } else {
+      groups = UserHelper.getAllGroup();
+    }
+    int i = 0;
+    key = key.replace("/", "").toLowerCase();
+    JSONArray jsChilds = new JSONArray();
+    for (Group group : groups) {
+      if (matchGroup(group, key)) {
+        jsChilds.put(toJson(group));
+      }
+      if (i == limit) {
+        break;
+      }
+      ++i;
+    }
+    return jsChilds;
+  }
+  
+  private static JSONArray concatArray(JSONArray... arrs) throws JSONException {
+    JSONArray result = new JSONArray();
+    for (JSONArray arr : arrs) {
+      for (int i = 0; i < arr.length(); i++) {
+        result.put(arr.get(i));
+      }
+    }
+    return result;
+  }
+
+  private boolean matchGroup(Group group, String key) {
+    if (group.getId().replace("/", "").startsWith(key)) {
+      return true;
+    }
+    if (group.getLabel().toLowerCase().startsWith(key)) {
+      return true;
+    }
+    return false;
+  }
+
+  private JSONObject toJson(User user) throws JSONException {
+    JSONObject object = new JSONObject();
+    String name = user.getDisplayName();
+    if (UserHelper.isEmpty(name)) {
+      name = user.getFirstName() + " " + user.getLastName();
+    }
+    object.put("id", user.getUserName());
+    object.put("name", name);
+    object.put("avatar", "");
+    //
+    return object;
+  }
+
+  private JSONObject toJson(Group group) throws JSONException {
+    JSONObject object = new JSONObject();
+    object.put("id", group.getId());
+    object.put("name", group.getLabel());
+    object.put("avatar", "");
+    //
+    return object;
+  }
+  
+  @Override
+  public void updateSelect(String value) {
+    addValue((WebuiRequestContext) WebuiRequestContext.getCurrentInstance(), value);
+  }
+  
   public UIPermissionContainer initContainer(String id, String requestURL, String defaultValue) {
     super.setId(id);
     //
@@ -90,7 +217,7 @@ public class UIPermissionContainer extends UIContainer {
   }
 
   public UIPermissionContainer setRequestURL(String requestURL) {
-    if (requestURL != null && requestURL.length() > 0) {
+    if (!UserHelper.isEmpty(requestURL)) {
       getUIPermissionSelectorInput().setRequestURL(requestURL);
     }
     return this;
@@ -145,7 +272,6 @@ public class UIPermissionContainer extends UIContainer {
       UIPermissionContainer panel = event.getSource();
       panel.isEditMode = false;
       String objectId = event.getRequestContext().getRequestParameter(OBJECTID);
-      LOG.debug("objectId " + objectId);
       panel.setValue(objectId);
       //
       event.getRequestContext().addUIComponentToUpdateByAjax(panel);
@@ -169,7 +295,9 @@ public class UIPermissionContainer extends UIContainer {
       uiUserSelector.setShowSearch(true);
       uiUserSelector.setShowSearchUser(true);
       uiUserSelector.setShowSearchGroup(false);
-      uiUserSelector.setSelectedGroup(permissionPanel.getLimitGroupId());
+      uiUserSelector.setLimitGroupId(permissionPanel.getLimitGroupId());
+      uiUserSelector.setComponent(permissionPanel);
+      //
       uiPopupWindow.setUIComponent(uiUserSelector);
       uiPopupWindow.setShow(true);
       uiPopupWindow.setWindowSize(740, 400);
@@ -193,10 +321,11 @@ public class UIPermissionContainer extends UIContainer {
         closePopup(uiPopupWindow);
       }
       //
-      UIGroupMembershipSelector group = uiPopupContainer.createUIComponent(UIGroupMembershipSelector.class, null,
-                                                                           GROUP_SELECTOR_ID + permissionPanel.getId());
+      UIGroupSelector group = uiPopupContainer.createUIComponent(UIGroupSelector.class, null, GROUP_SELECTOR_ID);
+      group.setComponent(permissionPanel);
       group.getChild(UITree.class).setId(TREE_GROUP_ID);
       group.getChild(org.exoplatform.webui.core.UIBreadcumbs.class).setId(BREADCUMB_GROUP_ID);
+      group.setType("1");
       //
       uiPopupWindow.setUIComponent(group);
       uiPopupWindow.setShow(true);
@@ -209,6 +338,7 @@ public class UIPermissionContainer extends UIContainer {
 
   public UIPermissionContainer addValue(WebuiRequestContext context, String values) {
     getUIPermissionSelectorInput().addValue(context, values);
+    this.isEditMode = true;
     return this;
   }
 
