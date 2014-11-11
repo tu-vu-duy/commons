@@ -2,6 +2,7 @@ package org.exoplatform.webui.container;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.portlet.MimeResponse;
 import javax.portlet.ResourceRequest;
@@ -58,6 +59,8 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
 
   final private static String BREADCUMB_GROUP_ID = "BreadcumbGroupSelector";
   
+  private static ConcurrentHashMap<String, JSONArray> caches = new ConcurrentHashMap<>();
+  
   private String limitedGroup = "";
   protected boolean isEditMode = false;
 
@@ -89,23 +92,51 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
   }
   
   public JSONArray filterUser(String key, int limit) throws Exception {
+    String KEY = "@user_" + key;
+    if(caches.containsKey(KEY)) {
+      return caches.get(KEY);
+    }
+    
     if (limit == 0) {
       limit = 10;
     }
-    ListAccess<User> listAccess = UserHelper.searchUser(new UserFilter(key, FilterType.ALL).setGroupId(getLimitGroupId()));
+    FilterType[] types = new FilterType[] { FilterType.USER_NAME, FilterType.FIRST_NAME, FilterType.LAST_NAME };
+    List<User> users = new ArrayList<>();
+    for (int i = 0; i < types.length && users.size() < limit; i++) {
+      User[] arr = filterUser(key, limit, types[i]);
+      for (int j = 0; j < arr.length && users.size() < limit; j++) {
+        if (!containUser(users, arr[j])) {
+          users.add(arr[j]);
+        }
+      }
+    }
+    JSONArray jsChilds = new JSONArray();
+    for (User user : users) {
+      jsChilds.put(toJson(user));
+    }
+    //
+    caches.put(KEY, jsChilds);
+    //
+    return jsChilds;
+  }
+
+  private User[] filterUser(String key, int limit, FilterType type) throws Exception {
+    if (limit == 0) {
+      limit = 10;
+    }
+    ListAccess<User> listAccess = UserHelper.searchUser(new UserFilter(key, type).setGroupId(getLimitGroupId()));
     int maxSize = listAccess.getSize();
     if (limit > maxSize) {
       limit = maxSize;
     }
-    JSONArray jsChilds = new JSONArray();
-    User[] users_ = listAccess.load(0, limit);
-    for (int i = 0; i < users_.length; i++) {
-      jsChilds.put(toJson(users_[i]));
-    }
-    return jsChilds;
+    return listAccess.load(0, limit);
   }
 
   public JSONArray filterGroup(String key, int limit) throws Exception {
+    String KEY = "@group_" + key;
+    if(caches.containsKey(KEY)) {
+      return caches.get(KEY);
+    }
     if (limit == 0) {
       limit = 10;
     }
@@ -129,6 +160,8 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
       }
       ++i;
     }
+    //
+    caches.put(KEY, jsChilds);
     return jsChilds;
   }
   
@@ -140,6 +173,15 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
       }
     }
     return result;
+  }
+
+  private static boolean containUser(List<User> users, User user) {
+    for (User user_ : users) {
+      if (user_.getUserName().equals(user)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private boolean matchGroup(Group group, String key) {
@@ -185,6 +227,8 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
     if (getUIPermissionSelectorInput() == null) {
       addChild(new UIPermissionSelectorInput(PERMISSION_INPUT + id, PERMISSION_INPUT + id, defaultValue));
     }
+    //
+    caches.clear();
     //
     return setRequestURL(requestURL);
   }
@@ -282,7 +326,7 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
     @Override
     public void execute(Event<UIPermissionContainer> event) throws Exception {
       UIPermissionContainer permissionPanel = event.getSource();
-
+      permissionPanel.isEditMode = true;
       UIPermissionPopupContainer uiPopupContainer = permissionPanel.getPopupContainer(event.getRequestContext());
       uiPopupContainer.setCurrentContainerId(permissionPanel.getId());
       UIPopupWindow uiPopupWindow = uiPopupContainer.getChildById(POPUP_WINDOW_ID);
@@ -311,7 +355,7 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
     @Override
     public void execute(Event<UIPermissionContainer> event) throws Exception {
       UIPermissionContainer permissionPanel = event.getSource();
-
+      permissionPanel.isEditMode = true;
       UIPermissionPopupContainer uiPopupContainer = permissionPanel.getPopupContainer(event.getRequestContext());
       uiPopupContainer.setCurrentContainerId(permissionPanel.getId());
       UIPopupWindow uiPopupWindow = uiPopupContainer.getChildById(POPUP_WINDOW_ID);
