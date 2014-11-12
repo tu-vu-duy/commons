@@ -41,10 +41,13 @@
   }; // Keys "enum"
   var defaultSettings = {
     showAvatars : true,
+    showGroup : true,
     firstShowAll : false,
     selectFirst : true,
     idActions : "",
     actionLink : null,
+    defaultGroupIcon : "uiIconGroup uiIconLightGray",
+    defaultUserIcon : "/social-resources/skin/images/ShareImages/UserAvtDefault.png",
     i18n : {
       inLabel : "in",
       anyLabel : "Any",
@@ -395,7 +398,9 @@
       //
       autocompleteItems(userMenus, 'user', settings.i18n.userLabel);
       //
-      autocompleteItems(groupMenus, 'group', settings.i18n.groupLabel);
+      if (settings.showGroup === true) {
+        autocompleteItems(groupMenus, 'group', settings.i18n.groupLabel);
+      }
       // apply behavior menu
       ulComplete.find('li.data:first').addClass('active');
       //
@@ -412,11 +417,11 @@
           var info = datas[key];
           var li = settings.templates.autocompleteListItem.replace('$id', key).replace(/\$display/g, info.name);
           if (settings.showAvatars) {
-            var avatar = '<i class="avatarMini"><img src="/social-resources/skin/images/ShareImages/UserAvtDefault.png"/></i> ';
+            var avatar = '<i class="avatarMini"><img src="' + settings.defaultUserIcon + '"/></i> ';
             if (info.avatar && info.avatar.length > 0) {
               avatar = '<i class="avatarMini"><img src="' + info.avatar + '"/></i> ';
             } else  if(type === 'group') {
-              avatar = '<i class="uiIconGroup uiIconLightGray"></i> ';
+              avatar = '<i class="' + settings.defaultGroupIcon + '"></i> ';
             }
             li = li.replace('$avatar', avatar);
           }

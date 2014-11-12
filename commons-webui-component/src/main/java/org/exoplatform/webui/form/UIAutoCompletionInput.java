@@ -3,14 +3,8 @@ package org.exoplatform.webui.form;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.StringTokenizer;
 
@@ -21,102 +15,57 @@ import org.apache.commons.lang.StringUtils;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
-import org.exoplatform.services.organization.Group;
-import org.exoplatform.services.organization.MembershipType;
-import org.exoplatform.services.organization.OrganizationService;
-import org.exoplatform.services.organization.User;
 import org.exoplatform.services.resources.ResourceBundleService;
 import org.exoplatform.webui.application.WebuiRequestContext;
+import org.exoplatform.webui.form.CompletionBean.DefaultCompletionBean;
+import org.json.JSONObject;
 
-public class UIPermissionSelectorInput extends UIFormInputBase<String> {
-  protected static Log LOG = ExoLogger.getLogger(UIPermissionSelectorInput.class);
+public class UIAutoCompletionInput<T extends CompletionBean> extends UIFormInputBase<String> {
+
+  protected static Log LOG = ExoLogger.getLogger(UIAutoCompletionInput.class);
   private static ResourceBundle res;
-  private static  OrganizationService organizationService;
-  private static List<String> listMemberhip;
-  private static Map<String, String> membershipData;
   private static Locale locale;
-  
+  private JSONObject settings = new JSONObject();
   private String requestURL = "";
+  private T completion;
 
-  private static OrganizationService getOrganizationService() {
-    if (organizationService == null) {
-      organizationService = (OrganizationService) PortalContainer.getInstance()
-                                                                 .getComponentInstanceOfType(OrganizationService.class);
+  public static Locale getLocale() {
+    if (locale == null) {
+      locale = WebuiRequestContext.getCurrentInstance().getLocale();
     }
-    return organizationService;
-  }
-  
-  private static Locale getLocale() {
     return locale;
+  }
+
+  public CompletionBean getCompletionBean() {
+    if (completion == null) {
+      completion = (T) DefaultCompletionBean.getInstance();
+    }
+    return completion;
+  }
+
+  public UIAutoCompletionInput<T> setCompletionBean(T completion) {
+    this.completion = completion;
+    return this;
   }
 
   public String getRequestURL() {
     return requestURL;
   }
-
-  public void setRequestURL(String requestURL) {
-    this.requestURL = requestURL;
-  }
-
-  public static List<String> getMembershipTypes() {
-    if (listMemberhip == null) {
-      try {
-        Collection<?> ms = getOrganizationService().getMembershipTypeHandler().findMembershipTypes();
-        List<MembershipType> memberships = (List<MembershipType>) ms;
-        Collections.sort(memberships, new Comparator<MembershipType>() {
-          @Override
-          public int compare(MembershipType o1, MembershipType o2) {
-            return o1.getName().compareTo(o2.getName());
-          }
-        });
-        listMemberhip = new LinkedList<String>();
-        boolean containWildcard = false;
-        for (MembershipType mt : memberships) {
-          listMemberhip.add(mt.getName());
-          if ("*".equals(mt.getName())) {
-            containWildcard = true;
-          }
-        }
-        if (!containWildcard) {
-          ((LinkedList<String>) listMemberhip).addFirst("*");
-        }
-      } catch (Exception e) {
-        LOG.warn("Get memberships type unsuccessfully.");
-      }
-    }
-    return listMemberhip;
-  }
-
-  private static String getMembershipType(String membershipType) {
-    return (membershipType.equals("*")) ? "any" : membershipType;
-  }
-
-  public static Map<String, String> buildMembershipData() {
-    if (membershipData == null) {
-      membershipData = new HashMap<String, String>();
-      for (String membershipType : UIPermissionSelectorInput.getMembershipTypes()) {
-        membershipType = getMembershipType(membershipType);
-        membershipData.put(membershipType, getCommonLabel("UIPermissionSelector.membership." + membershipType));
-      }
-    }
-    //
-    return membershipData;
-  }  
-
-  private String buildMembershipObject() {
-    StringBuilder builder = new StringBuilder();
-    Map<String, String> membershipData = buildMembershipData();
-    for (String membershipType : UIPermissionSelectorInput.getMembershipTypes()) {
-      if(builder.length() > 0) {
-        builder.append(",\n");
-      }
-      membershipType = getMembershipType(membershipType);
-      builder.append("\"").append(membershipType).append("\"").append(" : \"").append(membershipData.get(membershipType)).append("\"");
-    }
-    //
-    return builder.toString();
-  }
   
+  public UIAutoCompletionInput<T> setRequestURL(String requestURL) {
+    this.requestURL = requestURL;
+    return this;
+  }
+
+  public JSONObject getSettings() {
+    return settings;
+  }
+
+  public UIAutoCompletionInput<T> setSettings(JSONObject settings) {
+    this.settings = settings;
+    return this;
+  }
+
   private static ResourceBundle getResourceBundle() {
     if (res == null) {
       ResourceBundleService bundleService = (ResourceBundleService) PortalContainer.getInstance()
@@ -131,16 +80,16 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     try {
       return getResourceBundle().getString(key);
     } catch (Exception e) {
-      LOG.warn("Could not find key for " + key + " in " + res + " for locale " + res.getLocale());
+      LOG.warn("Could not find key for: " + key);
       return (key.indexOf(".") > 0) ? key.substring(key.lastIndexOf(".") + 1) : key;
     }
   }
   
-  public UIPermissionSelectorInput(String name, String bindingExpression) {
+  public UIAutoCompletionInput(String name, String bindingExpression) {
     super(name, bindingExpression, String.class);
   }
 
-  public UIPermissionSelectorInput(String name, String bindingExpression, String defaultValue) {
+  public UIAutoCompletionInput(String name, String bindingExpression, String defaultValue) {
     super(name, bindingExpression, String.class);
     this.defaultValue_ = defaultValue;
   }
@@ -183,7 +132,7 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
       StringTokenizer tokenizer = new StringTokenizer(value_, ",");
       while (tokenizer.hasMoreTokens()) {
         String token = tokenizer.nextToken();
-        result.add(new Bean(token).getDisplay());
+        result.add(getCompletionBean().parse(token).getDisplay());
       }
     }
     return result;
@@ -195,7 +144,7 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
       StringTokenizer tokenizer = new StringTokenizer(value, ",");
       while (tokenizer.hasMoreTokens()) {
         String token = tokenizer.nextToken();
-        datas.append(new Bean(token).toJSObject());
+        datas.append(getCompletionBean().parse(token).getJSObject());
         if(tokenizer.hasMoreTokens()) {
           datas.append(",");
         }
@@ -224,7 +173,6 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     if (locale == null || locale_ != locale) {
       locale = locale_;
       res = null;
-      membershipData = null;
     }
     String requestUrl = getRequestURL();
     if (requestUrl == null || requestUrl.length() == 0) {
@@ -254,12 +202,8 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
           .append("window.eXo.webui = window.eXo.webui || {};\n")
           .append("if(!window.eXo.webui.groupSelector) {\n")
           .append("  window.eXo.webui.groupSelector = {};\n")
-          .append("  var memberships_ = {")
-          .append(buildMembershipObject())
-          .append("  };")
           .append("  var defaultSetting = {\n")
           .append("   url : \"\",\n")
-          .append("   memberships : memberships_,\n")
           .append("   i18n : {\n")
           .append("     inLabel : \"").append(getCommonLabel("UIPermissionSelector.label.in")).append("\",\n")
           .append("     anyLabel : \"").append(getCommonLabel("UIPermissionSelector.membership.any")).append("\",\n")
@@ -276,7 +220,7 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
     //
     StringBuilder scripts = new StringBuilder();
     scripts.append("(function(jq) {")
-           .append("var settings = jq.extend(true, {}, {}, window.eXo.webui.groupSelector.defaultSetting);")
+           .append("var settings = jq.extend(true, {}, window.eXo.webui.groupSelector.defaultSetting, ").append(settings.toString()).append(");")
            .append("settings.url = \"").append(requestUrl).append("\";")
            .append("var datas = ").append(buildValueJsObject(value)).append(";")
            .append("jq(\"#wrapper-").append(getId()).append("\")")
@@ -287,76 +231,5 @@ public class UIPermissionSelectorInput extends UIFormInputBase<String> {
            .getRequireJS().require("SHARED/jquery", "jQuery")
            .require("SHARED/commons-uipermission")
            .addScripts(scripts.toString());
-  }
-  
-  public class Bean {
-    private String id;
-    private String label;
-    private boolean isUser = true;
-    private String membershipType;
-    private String groupId;
-    
-    public Bean(String id) {
-      this.id = id.trim();
-      this.isUser = (id.indexOf("/") < 0);
-      buildData();
-    }
-    
-    private void buildData() {
-      if (isUser) {
-        try {
-          User user = getOrganizationService().getUserHandler().findUserByName(this.id);
-          label = user.getDisplayName();
-          if (label == null || label.trim().length() == 0) {
-            label = user.getFirstName() + " " + user.getLastName();
-          }
-        } catch (Exception e) {
-          this.label = id;
-        }
-      } else {
-        membershipType = getMembershipType(this.id.substring(0, this.id.indexOf(":")));
-        groupId = this.id.substring(this.id.indexOf(":") + 1);
-        Map<String, String> membershipData = buildMembershipData();
-        if (membershipData.containsKey(membershipType)) {
-          membershipType = membershipData.get(membershipType);
-        }
-        try {
-          Group group = getOrganizationService().getGroupHandler().findGroupById(groupId);
-          label = group.getLabel();
-        } catch (Exception e) {
-          this.label = id;
-        }
-      }
-    }
-
-    public String getGroupId() {
-      return groupId;
-    }
-
-    public String toJSObject() {
-      StringBuilder builder = new StringBuilder();
-      if(isUser) {
-        builder.append("\"").append(id).append("\" : \"").append(label).append("\"");
-      } else {
-        builder.append("\"").append(id).append("\" : {")
-               .append("\"type\" : \"").append(membershipType).append("\", ")
-               .append("\"group\" : \"").append(label).append("\"")
-               .append("}");
-      }
-      return builder.toString();
-    }
-
-    public String getDisplay() {
-      StringBuilder builder = new StringBuilder("<strong>");
-      if(isUser) {
-        builder.append(label);
-      } else {
-        builder.append(membershipType).append(" ")
-               .append(getCommonLabel("UIPermissionSelector.label.in"))
-               .append(" ")
-               .append(label);
-      }
-      return builder.append("</strong> (").append(id).append(")").toString();
-    }
   }
 }

@@ -1,7 +1,9 @@
 package org.exoplatform.webui.container;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.portlet.MimeResponse;
@@ -21,8 +23,9 @@ import org.exoplatform.webui.core.UIPopupWindow;
 import org.exoplatform.webui.core.UITree;
 import org.exoplatform.webui.event.Event;
 import org.exoplatform.webui.event.EventListener;
+import org.exoplatform.webui.form.CompletionBean;
+import org.exoplatform.webui.form.UIAutoCompletionInput;
 import org.exoplatform.webui.form.UIForm;
-import org.exoplatform.webui.form.UIPermissionSelectorInput;
 import org.exoplatform.webui.form.user.UIGroupSelector;
 import org.exoplatform.webui.form.user.UISelector;
 import org.exoplatform.webui.form.user.UIUserSelector;
@@ -63,6 +66,7 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
   
   private String limitedGroup = "";
   protected boolean isEditMode = false;
+  private static Map<String, String> membershipData;
 
   public UIPermissionContainer() throws Exception {
   }
@@ -215,7 +219,34 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
     //
     return object;
   }
-  
+
+  public static String getMembershipType(String membershipType) {
+    return (membershipType.equals("*")) ? "any" : membershipType;
+  }
+
+  public static Map<String, String> buildMembershipData() {
+    if (membershipData == null
+        || !(WebuiRequestContext.getCurrentInstance().getLocale().equals(UIAutoCompletionInput.getLocale()))) {
+      membershipData = new HashMap<String, String>();
+      for (String membershipType : UserHelper.getMembershipTypes()) {
+        membershipType = getMembershipType(membershipType);
+        membershipData.put(membershipType, UIAutoCompletionInput.getCommonLabel("UIPermissionSelector.membership." + membershipType));
+      }
+    }
+    //
+    return membershipData;
+  }  
+
+  private JSONObject buildMembershipJson() throws JSONException {
+    JSONObject memberships = new JSONObject();
+    Map<String, String> membershipData = buildMembershipData();
+    for (String membershipType : UserHelper.getMembershipTypes()) {
+      memberships.put(membershipType, membershipData.get(membershipType));
+    }
+    //
+    return memberships;
+  }
+
   @Override
   public void updateSelect(String value) {
     addValue((WebuiRequestContext) WebuiRequestContext.getCurrentInstance(), value);
@@ -225,12 +256,25 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
     super.setId(id);
     //
     if (getUIPermissionSelectorInput() == null) {
-      addChild(new UIPermissionSelectorInput(PERMISSION_INPUT + id, PERMISSION_INPUT + id, defaultValue));
+      UIAutoCompletionInput<GroupCompletionBean> input = new UIAutoCompletionInput<GroupCompletionBean>(PERMISSION_INPUT + id, PERMISSION_INPUT + id, defaultValue);
+      input.setCompletionBean(new GroupCompletionBean());
+      //
+      addChild(input);
     }
     //
     caches.clear();
     //
     return setRequestURL(requestURL);
+  }
+  
+  protected void updateSetting() {
+    JSONObject settings = new JSONObject();
+    try {
+      settings.put("memberships", buildMembershipJson());
+    } catch (JSONException e) {
+      LOG.debug("Can not build membership json", e);
+    }
+    getUIPermissionSelectorInput().setSettings(settings);
   }
 
   private UIPermissionPopupContainer getPopupContainer(WebuiRequestContext context) {
@@ -255,9 +299,21 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
     return null;
   }
 
+  public JSONObject getSettings() {
+    return getUIPermissionSelectorInput().getSettings();
+  }
+
+  public void setSettings(JSONObject settings) {
+    getUIPermissionSelectorInput().setSettings(settings);
+  }
+
   public UIPermissionContainer setValue(String value) {
     getUIPermissionSelectorInput().setValue(value);
     return this;
+  }
+
+  public String getValue() {
+    return getUIPermissionSelectorInput().getValue();
   }
 
   public UIPermissionContainer setRequestURL(String requestURL) {
@@ -282,15 +338,11 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
   }
   
   protected String getResouceLabel(String key) {
-    return UIPermissionSelectorInput.getCommonLabel(key);
+    return UIAutoCompletionInput.getCommonLabel(key);
   }
   
-  private UIPermissionSelectorInput getUIPermissionSelectorInput() {
-    return getChild(UIPermissionSelectorInput.class);
-  }
-
-  public String getValue() {
-    return getUIPermissionSelectorInput().getValue();
+  private UIAutoCompletionInput<?> getUIPermissionSelectorInput() {
+    return getChild(UIAutoCompletionInput.class);
   }
 
   public List<String> getDisplayValue() {
@@ -386,5 +438,66 @@ public class UIPermissionContainer extends UIContainer implements UISelector<Str
     return this;
   }
 
-  
+  private class GroupCompletionBean extends CompletionBean {
+    private boolean isUser = true;
+    private String membershipType;
+    private String groupId;
+    @Override
+    public void buildData() {
+      this.isUser = (id.indexOf("/") < 0);
+      if (isUser) {
+        try {
+          User user = UserHelper.getUserHandler().findUserByName(this.id);
+          label = user.getDisplayName();
+          if (label == null || label.trim().length() == 0) {
+            label = user.getFirstName() + " " + user.getLastName();
+          }
+        } catch (Exception e) {
+          this.label = id;
+        }
+      } else {
+        membershipType = getMembershipType(this.id.substring(0, this.id.indexOf(":")));
+        groupId = this.id.substring(this.id.indexOf(":") + 1);
+        Map<String, String> membershipData = buildMembershipData();
+        if (membershipData.containsKey(membershipType)) {
+          membershipType = membershipData.get(membershipType);
+        }
+        try {
+          Group group = UserHelper.getGroupHandler().findGroupById(groupId);
+          label = group.getLabel();
+        } catch (Exception e) {
+          this.label = id;
+        }
+      }
+    }
+
+    @Override
+    public String getJSObject() {
+      StringBuilder builder = new StringBuilder();
+      if(isUser) {
+        builder.append("\"").append(id).append("\" : \"").append(label).append("\"");
+      } else {
+        builder.append("\"").append(id).append("\" : {")
+               .append("\"type\" : \"").append(membershipType).append("\", ")
+               .append("\"group\" : \"").append(label).append("\"")
+               .append("}");
+      }
+      return builder.toString();
+    }
+
+    @Override
+    public String getDisplay() {
+      StringBuilder builder = new StringBuilder("<strong>");
+      if(isUser) {
+        builder.append(label);
+      } else {
+        builder.append(membershipType).append(" ")
+               .append(UIAutoCompletionInput.getCommonLabel("UIPermissionSelector.label.in"))
+               .append(" ")
+               .append(label);
+      }
+      return builder.append("</strong> (").append(id).append(")").toString();
+    }
+    
+  }
 }

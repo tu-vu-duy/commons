@@ -7,6 +7,8 @@
 	def requireJS = _ctx.getRequestContext().getJavascriptManager().getRequireJS();
 	requireJS.require("SHARED/jquery", "jQuery").addScripts(scripts);
 	//
+	uicomponent.updateSetting();
+	//
 %>
 <div id="$uicomponent.id" class="uiPermissionContainer">
 	<div class="mode $displayMode editable-mode" style="vertical-align:top; padding-buttom:5px">

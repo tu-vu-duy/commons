@@ -19,6 +19,8 @@ package org.exoplatform.webui.form.user;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
@@ -26,10 +28,13 @@ import org.exoplatform.commons.utils.ListAccess;
 import org.exoplatform.commons.utils.ListAccessImpl;
 import org.exoplatform.container.PortalContainer;
 import org.exoplatform.portal.webui.util.Util;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 import org.exoplatform.services.organization.Group;
 import org.exoplatform.services.organization.GroupHandler;
 import org.exoplatform.services.organization.Membership;
 import org.exoplatform.services.organization.MembershipHandler;
+import org.exoplatform.services.organization.MembershipType;
 import org.exoplatform.services.organization.OrganizationService;
 import org.exoplatform.services.organization.Query;
 import org.exoplatform.services.organization.User;
@@ -38,14 +43,13 @@ import org.exoplatform.services.organization.impl.GroupImpl;
 import org.exoplatform.services.security.ConversationState;
 import org.exoplatform.services.security.Identity;
 import org.exoplatform.services.security.MembershipEntry;
-import org.json.JSONObject;
 
 /**
  * @author <a href="mailto:patrice.lamarque@exoplatform.com">Patrice Lamarque</a>
  * @version $Revision$
  */
 public class UserHelper {
-
+  protected static Log LOG = ExoLogger.getLogger(UserHelper.class);
   /**
    *  The value to compile between tow logic to filter users by key and groupId.
    *  + If all users of group less than @LIMIT_THRESHOLD we will get all users of group
@@ -53,6 +57,7 @@ public class UserHelper {
    *  + Else we will get all users by filter key and match this list users with group filter.
    */
   private static final int LIMIT_THRESHOLD = 200;
+  private static List<String> listMemberhip;
   
   public enum FilterType {
     USER_NAME("userName"), LAST_NAME("lastName"),
@@ -170,6 +175,35 @@ public class UserHelper {
       }
     }
     return true ;
+  }
+
+  public static List<String> getMembershipTypes() {
+    if (listMemberhip == null) {
+      try {
+        Collection<?> ms = getOrganizationService().getMembershipTypeHandler().findMembershipTypes();
+        List<MembershipType> memberships = (List<MembershipType>) ms;
+        Collections.sort(memberships, new Comparator<MembershipType>() {
+          @Override
+          public int compare(MembershipType o1, MembershipType o2) {
+            return o1.getName().compareTo(o2.getName());
+          }
+        });
+        listMemberhip = new LinkedList<String>();
+        boolean containWildcard = false;
+        for (MembershipType mt : memberships) {
+          listMemberhip.add(mt.getName());
+          if ("*".equals(mt.getName())) {
+            containWildcard = true;
+          }
+        }
+        if (!containWildcard) {
+          ((LinkedList<String>) listMemberhip).addFirst("*");
+        }
+      } catch (Exception e) {
+        LOG.warn("Get memberships type unsuccessfully.");
+      }
+    }
+    return listMemberhip;
   }
 
   /**
