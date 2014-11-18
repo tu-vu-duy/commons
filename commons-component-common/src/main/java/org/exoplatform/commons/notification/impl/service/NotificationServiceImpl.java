@@ -119,12 +119,12 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
    */
   private void sendInstantly(NotificationInfo notification) {
     final boolean stats = NotificationContextFactory.getInstance().getStatistics().isStatisticsEnabled();
-    sendNotif(notification);
     NotificationContext nCtx = NotificationContextImpl.cloneInstance();
     AbstractNotificationPlugin plugin = nCtx.getPluginContainer().getPlugin(notification.getKey());
     if (plugin != null) {
       nCtx.setNotificationInfo(notification);
       MessageInfo info = plugin.buildMessage(nCtx);
+      sendNotif(notification, info.getBody());
       
       if (info != null) {
         if (NotificationUtils.isValidEmailAddresses(info.getTo()) == true) {
@@ -139,23 +139,24 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     }
   }
 
-  private void sendNotif(NotificationInfo notification) {
+  private void sendNotif(NotificationInfo notification, String message) {
     try {
       URI uri = URI.create("ws://localhost:8080/social-portlet/notify/" + notification.getTo());
       WebSocketContainer wsContainer = ContainerProvider.getWebSocketContainer();
       Session session = wsContainer.connectToServer(NotificationClientEndPoint.class, uri);
       RemoteEndpoint.Basic basicRemote = session.getBasicRemote();
-      basicRemote.sendObject(buildMessage(notification));
+      basicRemote.sendObject(buildMessage(notification, message));
     } catch (Exception e) {
       LOG.error("Failed to connect with server : " + e, e.getMessage());
     }
   }
   
-  private Message buildMessage(NotificationInfo notification) {
+  private Message buildMessage(NotificationInfo notification, String text) {
     Message message = new Message();
     message.setTo(notification.getTo());
     message.setPluginId(notification.getKey().getId());
     message.setOwnerParameter(notification.getOwnerParameter());
+    message.setMessage(text);
     return message;
   }
   

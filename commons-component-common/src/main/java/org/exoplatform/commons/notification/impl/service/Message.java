@@ -48,6 +48,8 @@ public class Message {
 
   private Map<String, String> ownerParameter;
   
+  private String              message;
+  
   public Message(final String to, final String pluginId) {
     this.to = to;
     this.pluginId = pluginId;
@@ -88,6 +90,14 @@ public class Message {
     this.ownerParameter = ownerParameter;
   }
   
+  public String getMessage() {
+    return message;
+  }
+
+  public void setMessage(String message) {
+    this.message = message;
+  }
+
   public String buildStringFromMap(Map<String, String> ownerParameter) {
     StringBuilder sb = new StringBuilder();
     boolean hasNext = false;
@@ -125,6 +135,7 @@ public class Message {
             .add("to", message.getTo())
             .add("pluginId", message.getPluginId())
             .add("ownerParameter", message.buildStringFromMap(message.getOwnerParameter()))
+            .add("message", message.getMessage())
             .build()
             .toString();
     }
@@ -150,6 +161,7 @@ public class Message {
             message.setTo(json.getString("to"));
             message.setPluginId(json.getString("pluginId"));
             message.setOwnerParameter(message.buildMapFromString(json.getString("ownerParameter")));
+            message.setMessage(json.getString("message"));
         }
 
         return message;
