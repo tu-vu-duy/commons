@@ -18,7 +18,9 @@ package org.exoplatform.commons.notification.impl.service;
 
 import java.io.StringReader;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -86,20 +88,43 @@ public class Message {
     this.ownerParameter = ownerParameter;
   }
   
+  public String buildStringFromMap(Map<String, String> ownerParameter) {
+    StringBuilder sb = new StringBuilder();
+    boolean hasNext = false;
+    for (Entry<String, String> entry : ownerParameter.entrySet()) {
+      if (hasNext) {
+        sb.append(", ");
+      }
+      sb.append(entry.getKey()).append(" : ").append(entry.getValue());
+      hasNext = ownerParameter.size() > 1;
+    }
+    return sb.toString();
+  }
+  
+  public Map<String, String> buildMapFromString(String input) {
+    Map<String, String> ownerParameter = new HashMap<String, String>();
+    for (String element : input.split(",")) {
+      String[] entry = element.split(":");
+      ownerParameter.put(entry[0], entry.length > 1 ? entry[1] : "");
+    }
+    return ownerParameter;
+  }
+  
   public String toString() {
     return to + " : " + pluginId;
   }
   
   public static class MessageEncoder implements Encoder.Text< Message > {
     @Override
-    public void init( final EndpointConfig config ) {
+    public void init(final EndpointConfig config) {
     }
 
     @Override
-    public String encode( final Message message ) throws EncodeException {
+    public String encode(final Message message) throws EncodeException {
         return Json.createObjectBuilder()
-            .add( "to", message.getTo() )
-            .add( "pluginId", message.getPluginId() )
+            .add("to", message.getTo())
+            .add("pluginId", message.getPluginId())
+            .add("ownerParameter", message.buildStringFromMap(message.getOwnerParameter()))
             .build()
             .toString();
     }
@@ -110,27 +135,28 @@ public class Message {
 }
   
   public static class MessageDecoder implements Decoder.Text< Message > {
-    private JsonReaderFactory factory = Json.createReaderFactory( Collections.< String, Object >emptyMap() );
+    private JsonReaderFactory factory = Json.createReaderFactory(Collections.< String, Object >emptyMap());
 
     @Override
-    public void init( final EndpointConfig config ) {
+    public void init(final EndpointConfig config) {
     }
 
     @Override
-    public Message decode( final String str ) throws DecodeException {
+    public Message decode(final String str) throws DecodeException {
         final Message message = new Message();
 
-        try( final JsonReader reader = factory.createReader( new StringReader( str ) ) ) {
+        try(final JsonReader reader = factory.createReader(new StringReader(str))) {
             final JsonObject json = reader.readObject();
-            message.setTo( json.getString( "to" ) );
-            message.setPluginId( json.getString( "pluginId" ) );
+            message.setTo(json.getString("to"));
+            message.setPluginId(json.getString("pluginId"));
+            message.setOwnerParameter(message.buildMapFromString(json.getString("ownerParameter")));
         }
 
         return message;
     }
 
     @Override
-    public boolean willDecode( final String str ) {
+    public boolean willDecode(final String str) {
         return true;
     }
 

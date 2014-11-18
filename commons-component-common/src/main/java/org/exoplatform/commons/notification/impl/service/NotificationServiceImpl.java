@@ -145,13 +145,13 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
       WebSocketContainer wsContainer = ContainerProvider.getWebSocketContainer();
       Session session = wsContainer.connectToServer(NotificationClientEndPoint.class, uri);
       RemoteEndpoint.Basic basicRemote = session.getBasicRemote();
-      basicRemote.sendObject(new Message(notification.getTo(), notification.getKey().getId()));
+      basicRemote.sendObject(buildMessage(notification));
     } catch (Exception e) {
       LOG.error("Failed to connect with server : " + e, e.getMessage());
     }
   }
   
-  private Message buildNotificationMessage(NotificationInfo notification) {
+  private Message buildMessage(NotificationInfo notification) {
     Message message = new Message();
     message.setTo(notification.getTo());
     message.setPluginId(notification.getKey().getId());

@@ -11,21 +11,23 @@ import javax.websocket.Session;
 
 import org.exoplatform.commons.notification.impl.service.Message.MessageDecoder;
 import org.exoplatform.commons.notification.impl.service.Message.MessageEncoder;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 
 @ClientEndpoint(encoders = { MessageEncoder.class }, decoders = { MessageDecoder.class })
 public class NotificationClientEndPoint {
-    @OnOpen
-    public void onOpen(Session session) {
-      System.out.println("Open");
-    }
- 
-    @OnMessage
-    public void processMessage(Message message) {
-      System.out.println("Received message in client: " + message);
-    }
- 
-    @OnError
-    public void processError(Throwable t) {
-      t.printStackTrace();
-    }
+  private static final Log LOG = ExoLogger.getLogger(NotificationClientEndPoint.class);
+
+  @OnOpen
+  public void onOpen(Session session) {
+  }
+
+  @OnMessage
+  public void processMessage(Message message) {
+  }
+
+  @OnError
+  public void processError(Throwable t) {
+    LOG.error(t);
+  }
 }
