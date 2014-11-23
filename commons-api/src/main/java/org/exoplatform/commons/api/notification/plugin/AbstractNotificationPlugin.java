@@ -89,6 +89,14 @@ public abstract class AbstractNotificationPlugin extends BaseComponentPlugin {
   protected abstract MessageInfo makeMessage(NotificationContext ctx);
   
   /**
+  * Makes the MessageInfor from given NotificationMessage what keep inside NotificationContext
+  * it's using to display on the popover
+  * @param context
+  * @return
+  */
+ protected abstract String makeUIMessage(NotificationContext ctx);
+  
+  /**
    * Makes the Digest message from given NotificationMessage what keep inside NotificationContext
    * @param ctx
    * @param wtiter
@@ -115,6 +123,15 @@ public abstract class AbstractNotificationPlugin extends BaseComponentPlugin {
     MessageInfo messageInfo = makeMessage(ctx);
     return messageInfo.pluginId(getId()).from(NotificationPluginUtils.getFrom(message.getFrom()))
                .to(NotificationPluginUtils.getTo(message.getTo())).end();
+  }
+  
+  /**
+   * Makes ui massage
+   * @param ctx
+   * @return
+   */
+  public String buildUIMessage(NotificationContext ctx) {
+    return makeUIMessage(ctx);
   }
 
   /**

@@ -120,6 +120,16 @@ public class Message {
     return ownerParameter;
   }
   
+  public String jsonString() {
+    return Json.createObjectBuilder()
+        .add("to", this.getTo())
+        .add("pluginId", this.getPluginId())
+        .add("ownerParameter", this.buildStringFromMap(this.getOwnerParameter()))
+        .add("message", this.getMessage())
+        .build()
+        .toString();
+  }
+  
   public String toString() {
     return to + " : " + pluginId;
   }
@@ -153,19 +163,18 @@ public class Message {
     }
 
     @Override
-    public Message decode(final String str) throws DecodeException {
-        final Message message = new Message();
+		public Message decode(final String str) throws DecodeException {
+			final Message message = new Message();
 
-        try(final JsonReader reader = factory.createReader(new StringReader(str))) {
-            final JsonObject json = reader.readObject();
-            message.setTo(json.getString("to"));
-            message.setPluginId(json.getString("pluginId"));
-            message.setOwnerParameter(message.buildMapFromString(json.getString("ownerParameter")));
-            message.setMessage(json.getString("message"));
-        }
+			final JsonReader reader = factory.createReader(new StringReader(str));
+			final JsonObject json = reader.readObject();
+			message.setTo(json.getString("to"));
+			message.setPluginId(json.getString("pluginId"));
+			message.setOwnerParameter(message.buildMapFromString(json.getString("ownerParameter")));
+			message.setMessage(json.getString("message"));
 
-        return message;
-    }
+			return message;
+		}
 
     @Override
     public boolean willDecode(final String str) {

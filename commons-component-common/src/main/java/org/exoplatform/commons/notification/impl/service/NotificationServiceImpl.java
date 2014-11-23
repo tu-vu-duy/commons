@@ -16,17 +16,11 @@
  */
 package org.exoplatform.commons.notification.impl.service;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
-import javax.websocket.ContainerProvider;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.Session;
-import javax.websocket.WebSocketContainer;
 
 import org.exoplatform.commons.api.notification.NotificationContext;
 import org.exoplatform.commons.api.notification.model.MessageInfo;
@@ -45,12 +39,15 @@ import org.exoplatform.commons.notification.NotificationContextFactory;
 import org.exoplatform.commons.notification.NotificationUtils;
 import org.exoplatform.commons.notification.impl.AbstractService;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
+import org.exoplatform.commons.notification.net.WebSocketBootstrap;
+import org.exoplatform.commons.notification.net.WebSocketServer;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.commons.utils.ListAccess;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 import org.exoplatform.services.organization.OrganizationService;
 import org.exoplatform.services.organization.User;
+import org.vertx.java.core.json.JsonObject;
 
 public class NotificationServiceImpl extends AbstractService implements NotificationService {
   private static final Log         LOG              = ExoLogger.getLogger(NotificationServiceImpl.class);
@@ -124,7 +121,8 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     if (plugin != null) {
       nCtx.setNotificationInfo(notification);
       MessageInfo info = plugin.buildMessage(nCtx);
-      sendNotif(notification, info.getBody());
+      String message = plugin.buildUIMessage(nCtx);
+      sendNotif(notification, message);
       
       if (info != null) {
         if (NotificationUtils.isValidEmailAddresses(info.getTo()) == true) {
@@ -141,11 +139,12 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
 
   private void sendNotif(NotificationInfo notification, String message) {
     try {
-      URI uri = URI.create("ws://localhost:8080/social-portlet/notify/" + notification.getTo());
-      WebSocketContainer wsContainer = ContainerProvider.getWebSocketContainer();
-      Session session = wsContainer.connectToServer(NotificationClientEndPoint.class, uri);
-      RemoteEndpoint.Basic basicRemote = session.getBasicRemote();
-      basicRemote.sendObject(buildMessage(notification, message));
+      Message msg = buildMessage(notification, message);
+      JsonObject jsonObject = new JsonObject();
+      jsonObject.putString("from", msg.getFrom());
+      jsonObject.putString("pluginId", msg.getPluginId());
+      jsonObject.putString("message", msg.getMessage());
+      WebSocketBootstrap.sendMessage(WebSocketServer.NOTIFICATION_WEB_IDENTIFIER, notification.getTo(), jsonObject.encode());
     } catch (Exception e) {
       LOG.error("Failed to connect with server : " + e, e.getMessage());
     }
