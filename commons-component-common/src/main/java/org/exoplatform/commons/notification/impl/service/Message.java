@@ -16,21 +16,9 @@
  */
 package org.exoplatform.commons.notification.impl.service;
 
-import java.io.StringReader;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonReaderFactory;
-import javax.websocket.DecodeException;
-import javax.websocket.Decoder;
-import javax.websocket.EncodeException;
-import javax.websocket.Encoder;
-import javax.websocket.EndpointConfig;
 
 /**
  * Created by The eXo Platform SAS
@@ -120,70 +108,9 @@ public class Message {
     return ownerParameter;
   }
   
-  public String jsonString() {
-    return Json.createObjectBuilder()
-        .add("to", this.getTo())
-        .add("pluginId", this.getPluginId())
-        .add("ownerParameter", this.buildStringFromMap(this.getOwnerParameter()))
-        .add("message", this.getMessage())
-        .build()
-        .toString();
-  }
-  
   public String toString() {
     return to + " : " + pluginId;
   }
   
-  public static class MessageEncoder implements Encoder.Text< Message > {
-    @Override
-    public void init(final EndpointConfig config) {
-    }
-
-    @Override
-    public String encode(final Message message) throws EncodeException {
-        return Json.createObjectBuilder()
-            .add("to", message.getTo())
-            .add("pluginId", message.getPluginId())
-            .add("ownerParameter", message.buildStringFromMap(message.getOwnerParameter()))
-            .add("message", message.getMessage())
-            .build()
-            .toString();
-    }
-
-    @Override
-    public void destroy() {
-    }
-}
-  
-  public static class MessageDecoder implements Decoder.Text< Message > {
-    private JsonReaderFactory factory = Json.createReaderFactory(Collections.< String, Object >emptyMap());
-
-    @Override
-    public void init(final EndpointConfig config) {
-    }
-
-    @Override
-		public Message decode(final String str) throws DecodeException {
-			final Message message = new Message();
-
-			final JsonReader reader = factory.createReader(new StringReader(str));
-			final JsonObject json = reader.readObject();
-			message.setTo(json.getString("to"));
-			message.setPluginId(json.getString("pluginId"));
-			message.setOwnerParameter(message.buildMapFromString(json.getString("ownerParameter")));
-			message.setMessage(json.getString("message"));
-
-			return message;
-		}
-
-    @Override
-    public boolean willDecode(final String str) {
-        return true;
-    }
-
-    @Override
-    public void destroy() {
-    }
-  }
 
 }
