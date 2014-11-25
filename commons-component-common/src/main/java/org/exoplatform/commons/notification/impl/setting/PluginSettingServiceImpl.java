@@ -52,6 +52,8 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
   private Map<String, GroupProvider> groupProviderMap = new ConcurrentHashMap<String, GroupProvider>();
 
   private static final String NAME_SPACES = "exo:";
+
+  private static final String INTRANET = "intranet";
   
   /** Defines the number of days in each month per plugin*/
   private static final int DAYS_OF_MONTH = 31;
@@ -66,10 +68,11 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
   public void registerPluginConfig(PluginConfig pluginConfig) {
     pluginConfigs.add(pluginConfig);
     if (pluginConfig.isChildPlugin() == false) {
-      PluginInfo providerData = new PluginInfo();
-      providerData.setType(pluginConfig.getPluginId())
+      PluginInfo pluginInfo = new PluginInfo();
+      pluginInfo.setType(pluginConfig.getPluginId())
                   .setOrder(Integer.valueOf(pluginConfig.getOrder()))
                   .setActive(isActive(pluginConfig.getPluginId(), true))
+                  .setIntranetActive(isIntranetActive(pluginConfig.getPluginId(), true))
                   .setResourceBundleKey(pluginConfig.getResourceBundleKey())
                   .setBundlePath(pluginConfig.getTemplateConfig().getBundlePath())
                   .setDefaultConfig(pluginConfig.getDefaultConfig());
@@ -81,10 +84,10 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
       }
       //
       if (groupProviderMap.containsKey(groupId)) {
-        groupProviderMap.get(groupId).addProviderData(providerData);
+        groupProviderMap.get(groupId).addProviderData(pluginInfo);
       } else if (groupId != null && groupId.length() > 0) {
         GroupProvider groupProvider = new GroupProvider(groupId);
-        groupProvider.addProviderData(providerData);
+        groupProvider.addProviderData(pluginInfo);
         if (gConfig != null) {
           groupProvider.setOrder(Integer.valueOf(gConfig.getOrder()));
           groupProvider.setResourceBundleKey(gConfig.getResourceBundleKey());
@@ -125,6 +128,7 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
     for (GroupProvider groupProvider : groupProviderMap.values()) {
       for (PluginInfo providerData : groupProvider.getProviderDatas()) {
         providerData.setActive(isActive(providerData.getType()));
+        providerData.setIntranetActive(isIntranetActive(providerData.getType()));
       }
       groupProviders.add(groupProvider);
     }
@@ -224,6 +228,30 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
       }
       return 0;
     }
+  }
+
+  @Override
+  public void saveInetanetPlugin(String pluginId, boolean isActive) {
+    saveSetting(INTRANET + pluginId, isActive);
+  }
+
+  @Override
+  public boolean isIntranetActive(String pluginId) {
+    return isIntranetActive(pluginId, false);
+  }
+
+  public boolean isIntranetActive(String pluginId, boolean defaultValue) {
+    if (pluginId == null || pluginId.length() == 0) {
+      return false;
+    }
+    String key = INTRANET + pluginId;
+    SettingValue<?> sValue = settingService.get(Context.GLOBAL, Scope.GLOBAL, (NAME_SPACES + key));
+    if (sValue != null) {
+      return ((Boolean) sValue.getValue()) ? true : false;
+    } else if (defaultValue == true) {
+      saveSetting(key, true);
+    }
+    return defaultValue;
   }
 
 }

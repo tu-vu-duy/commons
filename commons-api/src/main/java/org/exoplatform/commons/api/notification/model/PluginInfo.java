@@ -32,6 +32,8 @@ public class PluginInfo {
 
   private boolean     isActive      = true;
 
+  private boolean     isIntranetActive = true;
+
   private List<String> defaultConfig = new ArrayList<String>();
 
   public PluginInfo() {
@@ -124,6 +126,15 @@ public class PluginInfo {
    */
   public PluginInfo setActive(boolean isActive) {
     this.isActive = isActive;
+    return this;
+  }
+
+  public boolean isIntranetActive() {
+    return isIntranetActive;
+  }
+
+  public PluginInfo setIntranetActive(boolean isIntranetActive) {
+    this.isIntranetActive = isIntranetActive;
     return this;
   }
 

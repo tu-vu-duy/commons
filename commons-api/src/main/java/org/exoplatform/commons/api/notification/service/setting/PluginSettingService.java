@@ -67,6 +67,24 @@ public interface PluginSettingService {
    * @return The returned value is "true" if the plugin is active or "false" if the plugin is inactive.
    */
   boolean isActive(String pluginId);
+
+  /**
+   * Saves active intranet notification.
+   * 
+   * @param pluginId Id of the saved plugin.
+   * @param isActive If is "true", the plugin will send intranet notification 
+   *        or "false" if the plugin is inactive send intranet notification.
+   */
+  void saveInetanetPlugin(String pluginId, boolean isActive);
+  
+  /**
+   * Checks if a plugin is active or inactive.
+   * 
+   * @param pluginId Id of the plugin.
+   * @return The returned value is "true" if the plugin is active send intranet notification 
+   *         or "false" if the plugin is inactive send intranet notification.
+   */
+  boolean isIntranetActive(String pluginId);
   
   /**
    * Gets all Ids of active plugins.
