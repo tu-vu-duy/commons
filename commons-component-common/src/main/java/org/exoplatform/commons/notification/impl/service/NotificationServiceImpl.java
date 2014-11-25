@@ -96,6 +96,10 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
       if (userSetting.isInInstantly(pluginId)) {
         sendInstantly(notification.clone().setTo(userId));
       }
+      // send web notification
+      if (userSetting.isInInstantly(pluginId)) {
+        sendNotif(notification.clone().setTo(userId));
+      }
       //
       if (userSetting.isActiveWithoutInstantly(pluginId)) {
         userIdPendings.add(userId);
@@ -121,8 +125,6 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     if (plugin != null) {
       nCtx.setNotificationInfo(notification);
       MessageInfo info = plugin.buildMessage(nCtx);
-      String message = plugin.buildUIMessage(nCtx);
-      sendNotif(notification, message);
       
       if (info != null) {
         if (NotificationUtils.isValidEmailAddresses(info.getTo()) == true) {
@@ -137,26 +139,21 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     }
   }
 
-  private void sendNotif(NotificationInfo notification, String message) {
+  private void sendNotif(NotificationInfo notification) {
+    NotificationContext nCtx = NotificationContextImpl.cloneInstance();
+    AbstractNotificationPlugin plugin = nCtx.getPluginContainer().getPlugin(notification.getKey());
+    if (plugin == null) {
+      return;
+    }
     try {
-      Message msg = buildMessage(notification, message);
+      nCtx.setNotificationInfo(notification);
+      String message = plugin.buildUIMessage(nCtx);
       JsonObject jsonObject = new JsonObject();
-      jsonObject.putString("from", msg.getFrom());
-      jsonObject.putString("pluginId", msg.getPluginId());
-      jsonObject.putString("message", msg.getMessage());
+      jsonObject.putString("message", message);
       WebSocketBootstrap.sendMessage(WebSocketServer.NOTIFICATION_WEB_IDENTIFIER, notification.getTo(), jsonObject.encode());
     } catch (Exception e) {
       LOG.error("Failed to connect with server : " + e, e.getMessage());
     }
-  }
-  
-  private Message buildMessage(NotificationInfo notification, String text) {
-    Message message = new Message();
-    message.setTo(notification.getTo());
-    message.setPluginId(notification.getKey().getId());
-    message.setOwnerParameter(notification.getOwnerParameter());
-    message.setMessage(text);
-    return message;
   }
   
   @Override

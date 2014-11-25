@@ -19,8 +19,6 @@ package org.exoplatform.commons.notification.net;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import org.exoplatform.commons.notification.net.router.ExoRouter;
 import org.exoplatform.commons.notification.net.router.ExoRouter.Route;
@@ -47,23 +45,8 @@ public class WebSocketServer extends Verticle {
   private static final Log logger = ExoLogger.getLogger(WebSocketServer.class);
   private final ObjectMapper mapper = new ObjectMapper();
   private final JsonFactory jsonFactory = mapper.getFactory();
-  //identifierId as notification-web, forum-private-message
-  //key remoteId
   
-  private Timer metricsTimer = new Timer(true);
-  private final Metrics metrics = new Metrics();
-
   public WebSocketServer() {
-   //this.setVertx(VertxFactory.newVertx());
-    logger.info("identifiers," + Metrics.getHeading());
-   
-    metricsTimer.schedule(new TimerTask() {
-        @Override 
-        public void run() {
-            logger.info(WebSocketBootstrap.subscriptions().size() + metrics.getSummary().toString());
-        }
-    }, 5000, 15000);
-    //
     WebSocketBootstrap.setWebSocketServer(this);
   }
   
@@ -150,7 +133,6 @@ public class WebSocketServer extends Verticle {
         logger.error("Failed to send " + message, e);
       }
     }
-    metrics.update(message);
   }
   
   /**
@@ -181,7 +163,6 @@ public class WebSocketServer extends Verticle {
         logger.warn(e.getMessage());
       }
     }
-    metrics.update(message);
   }
 
   @Override

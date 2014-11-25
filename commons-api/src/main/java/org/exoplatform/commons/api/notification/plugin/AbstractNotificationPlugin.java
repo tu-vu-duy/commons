@@ -36,6 +36,8 @@ public abstract class AbstractNotificationPlugin extends BaseComponentPlugin {
   
   private Template engine;
   
+  private Template intranetNotificationEngine;
+  
   public AbstractNotificationPlugin(InitParams initParams) {
     pluginConfig = initParams.getObjectParamValues(PluginConfig.class);
   }
@@ -179,6 +181,14 @@ public abstract class AbstractNotificationPlugin extends BaseComponentPlugin {
    */
   public void setTemplateEngine(Template engine) {
     this.engine = engine;
+  }
+
+  public Template getIntranetNotificationEngine() {
+    return intranetNotificationEngine;
+  }
+
+  public void setIntranetNotificationEngine(Template intranetNotificationEngine) {
+    this.intranetNotificationEngine = intranetNotificationEngine;
   }
 
 }
