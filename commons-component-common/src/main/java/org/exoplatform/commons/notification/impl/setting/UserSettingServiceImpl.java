@@ -117,10 +117,12 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
     if (instantlys != null) {
       model.setUserId(userId);
       model.setActive(isActive(userId));
-      model.setIntranetActive(isIntranetActive(userId));
       model.setInstantlyProviders(instantlys);
       model.setDailyProviders(getArrayListValue(userId, EXO_DAILY, Collections.<String> emptyList()));
       model.setWeeklyProviders(getArrayListValue(userId, EXO_WEEKLY, Collections.<String> emptyList()));
+      //
+      model.setIntranetActive(isIntranetActive(userId));
+      model.setIntranetPlugins(getArrayListValue(userId, EXO_INTRANET_NOTIF, Collections.<String> emptyList()));
     } else {
       model = UserSetting.getDefaultInstance().setUserId(userId);
       addMixin(userId);
