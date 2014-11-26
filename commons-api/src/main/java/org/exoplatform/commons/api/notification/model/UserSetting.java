@@ -298,20 +298,21 @@ public class UserSetting {
     if (defaultSetting == null) {
       PluginSettingService settingService = (PluginSettingService) PortalContainer.getInstance()
                                               .getComponentInstanceOfType(PluginSettingService.class);
-      List<PluginInfo> providerDatas = settingService.getActivePlugins();
-      
-      if (providerDatas == null || providerDatas.size()==0) {
-        return new UserSetting();
-      }
+      List<PluginInfo> emailPlugins = settingService.getActivePlugins();
+      List<PluginInfo> intranetPlugins = settingService.getIntranetActivePlugins();
       
       defaultSetting = getInstance();
       defaultSetting.setActive(true);
-      defaultSetting.setIntranetActive(true);
-      for (PluginInfo pluginInfo : providerDatas) {
+      for (PluginInfo pluginInfo : emailPlugins) {
         for (String defaultConf : pluginInfo.getDefaultConfig()) {
-          FREQUENCY f = FREQUENCY.getFrequecy(defaultConf);
-          defaultSetting.addProvider(pluginInfo.getType(), f);
-          if(f == FREQUENCY.INSTANTLY) {
+          defaultSetting.addProvider(pluginInfo.getType(), FREQUENCY.getFrequecy(defaultConf));
+        }
+      }
+      //
+      defaultSetting.setIntranetActive(true);
+      for (PluginInfo pluginInfo : intranetPlugins) {
+        for (String defaultConf : pluginInfo.getDefaultConfig()) {
+          if(FREQUENCY.getFrequecy(defaultConf) == FREQUENCY.INSTANTLY) {
             defaultSetting.addIntranetPlugin(pluginInfo.getType());
           }
         }

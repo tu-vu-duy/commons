@@ -148,27 +148,40 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
 
   @Override
   public List<String> getActivePluginIds() {
-    Set<String> activeProviderIds = new HashSet<String>();
+    Set<String> activePluginIds = new HashSet<String>();
     Collections.sort(pluginConfigs, new ComparatorASC());
     for (PluginConfig pluginConfig : pluginConfigs) {
       if (pluginConfig.isChildPlugin() == false && isActive(pluginConfig.getPluginId())) {
-        activeProviderIds.add(pluginConfig.getPluginId());
+        activePluginIds.add(pluginConfig.getPluginId());
       }
     }
-    return new ArrayList<String>(activeProviderIds);
+    return new ArrayList<String>(activePluginIds);
   }
 
   @Override
   public List<PluginInfo> getActivePlugins() {
-    Set<PluginInfo> activeProviders = new HashSet<PluginInfo>();
-    for (GroupProvider groupProvider : groupProviderMap.values()) {
-      for (PluginInfo providerData : groupProvider.getProviderDatas()) {
-        if (isActive(providerData.getType())) {
-          activeProviders.add(providerData);
+    Set<PluginInfo> activePlugins = new HashSet<PluginInfo>();
+    for (GroupProvider groupPlugin : groupProviderMap.values()) {
+      for (PluginInfo pluginInfo : groupPlugin.getProviderDatas()) {
+        if (isIntranetActive(pluginInfo.getType())) {
+          activePlugins.add(pluginInfo);
         }
       }
     }
-    return new ArrayList<PluginInfo>(activeProviders);
+    return Collections.unmodifiableList(new ArrayList<PluginInfo>(activePlugins));
+  }
+
+  @Override
+  public List<PluginInfo> getIntranetActivePlugins() {
+    Set<PluginInfo> activePlugins = new HashSet<PluginInfo>();
+    for (GroupProvider groupPlugin : groupProviderMap.values()) {
+      for (PluginInfo pluginInfo : groupPlugin.getProviderDatas()) {
+        if (isActive(pluginInfo.getType())) {
+          activePlugins.add(pluginInfo);
+        }
+      }
+    }
+    return Collections.unmodifiableList(new ArrayList<PluginInfo>(activePlugins));
   }
 
   private void saveSetting(String property, boolean value) {

@@ -73,7 +73,15 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     if (NotificationContextFactory.getInstance().getStatisticsService().isStatisticsEnabled()) {
       NotificationContextFactory.getInstance().getStatisticsCollector().createNotificationInfoCount(pluginId);
     }
-    // if the provider is not active, do nothing
+    //
+    processEmailNotification(notification);
+    //
+    processIntranetNotification(notification);
+  }
+  
+  private void processEmailNotification(NotificationInfo notification) throws Exception {
+    String pluginId = notification.getKey().getId();
+    // if the plugin is not active, do nothing
     if (CommonsUtils.getService(PluginSettingService.class).isActive(pluginId) == false) {
       return;
     }
@@ -96,10 +104,6 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
       if (userSetting.isInInstantly(pluginId)) {
         sendInstantly(notification.clone().setTo(userId));
       }
-      // send web notification
-      if (userSetting.isInInstantly(pluginId)) {
-        sendNotif(notification.clone().setTo(userId));
-      }
       //
       if (userSetting.isActiveWithoutInstantly(pluginId)) {
         userIdPendings.add(userId);
@@ -112,6 +116,29 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
       storage.save(notification);
     }
   }
+  
+  private void processIntranetNotification(NotificationInfo notification) {
+    String pluginId = notification.getKey().getId();
+    // if the plugin is not active, do nothing
+    if (CommonsUtils.getService(PluginSettingService.class).isIntranetActive(pluginId) == false) {
+      return;
+    }
+    //
+    UserSettingService notificationService = CommonsUtils.getService(UserSettingService.class);
+    List<String> userIds = notification.getSendToUserIds();
+    //
+    if (notification.isSendAll()) {
+      userIds = notificationService.getUserHasIntranetNotifSetting(pluginId);
+    }
+    for (String userId : userIds) {
+      UserSetting userSetting = notificationService.get(userId);
+      //
+      if (userSetting.isIntranetActive() &&  userSetting.isInInstantly(pluginId)) {
+        sendNotif(notification.clone().setTo(userId));
+      }
+    }
+  }
+  
   
   /**
    * Process to send instantly mail

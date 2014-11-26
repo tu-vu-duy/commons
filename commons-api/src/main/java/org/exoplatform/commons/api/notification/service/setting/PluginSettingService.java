@@ -94,10 +94,16 @@ public interface PluginSettingService {
   List<String> getActivePluginIds();
 
   /**
-   * Gets information of all active plugins.
+   * Gets information of all active plugins to send email notification.
    * 
    * @return Information of the active plugins.
    */
   List<PluginInfo> getActivePlugins();
+  /**
+   * Gets information of all active plugins to send intranet notification.
+   * 
+   * @return Information of the active plugins.
+   */
+  List<PluginInfo> getIntranetActivePlugins();
 
 }
