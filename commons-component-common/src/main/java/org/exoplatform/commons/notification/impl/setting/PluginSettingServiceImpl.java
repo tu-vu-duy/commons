@@ -60,7 +60,7 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
 
   private SettingService settingService;
 
-  public PluginSettingServiceImpl(SettingService settingService) {
+  public PluginSettingServiceImpl(SettingService settingService) { 
     this.settingService = settingService;
   }
 
