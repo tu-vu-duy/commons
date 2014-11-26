@@ -155,8 +155,6 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
         activeProviderIds.add(pluginConfig.getPluginId());
       }
     }
-
-    LOG.info("Active pluginIds:: " + activeProviderIds.toString());
     return new ArrayList<String>(activeProviderIds);
   }
 
@@ -170,16 +168,11 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
         }
       }
     }
-
-    LOG.info("Active plugin info:: " + activeProviders.toString());
     return new ArrayList<PluginInfo>(activeProviders);
   }
 
   private void saveSetting(String property, boolean value) {
-    settingService.set(Context.GLOBAL,
-                       Scope.GLOBAL,
-                       (NAME_SPACES + property),
-                       SettingValue.create(value));
+    settingService.set(Context.GLOBAL, Scope.GLOBAL, (NAME_SPACES + property), SettingValue.create(value));
   }
 
   private void createParentNodeOfPlugin(String pluginId) {
@@ -198,19 +191,8 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
     }
   }
 
-  private boolean isActive(String providerId, boolean defaultValue) {
-    if (providerId == null || providerId.length() == 0) {
-      return false;
-    }
-    SettingValue<?> sValue = settingService.get(Context.GLOBAL,
-                                                Scope.GLOBAL,
-                                                (NAME_SPACES + providerId));
-    if (sValue != null) {
-      return ((Boolean) sValue.getValue()) ? true : false;
-    } else if (defaultValue == true) {
-      saveSetting(providerId, true);
-    }
-    return defaultValue;
+  private boolean isActive(String pluginId, boolean defaultValue) {
+    return isActiveValue(pluginId, defaultValue);
   }
 
   private class ComparatorASC implements Comparator<Object> {
@@ -244,12 +226,18 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
     if (pluginId == null || pluginId.length() == 0) {
       return false;
     }
-    String key = INTRANET + pluginId;
-    SettingValue<?> sValue = settingService.get(Context.GLOBAL, Scope.GLOBAL, (NAME_SPACES + key));
+    return isActiveValue(INTRANET + pluginId, defaultValue);
+  }
+
+  private boolean isActiveValue(String property, boolean defaultValue) {
+    if (property == null || property.length() == 0) {
+      return false;
+    }
+    SettingValue<?> sValue = settingService.get(Context.GLOBAL, Scope.GLOBAL, (NAME_SPACES + property));
     if (sValue != null) {
       return ((Boolean) sValue.getValue()) ? true : false;
     } else if (defaultValue == true) {
-      saveSetting(key, true);
+      saveSetting(property, true);
     }
     return defaultValue;
   }

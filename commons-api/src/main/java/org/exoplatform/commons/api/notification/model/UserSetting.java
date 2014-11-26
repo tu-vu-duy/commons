@@ -307,12 +307,12 @@ public class UserSetting {
       defaultSetting = getInstance();
       defaultSetting.setActive(true);
       defaultSetting.setIntranetActive(true);
-      for (PluginInfo providerData : providerDatas) {
-        for (String defaultConf : providerData.getDefaultConfig()) {
+      for (PluginInfo pluginInfo : providerDatas) {
+        for (String defaultConf : pluginInfo.getDefaultConfig()) {
           FREQUENCY f = FREQUENCY.getFrequecy(defaultConf);
-          defaultSetting.addProvider(providerData.getType(), f);
+          defaultSetting.addProvider(pluginInfo.getType(), f);
           if(f == FREQUENCY.INSTANTLY) {
-            defaultSetting.addIntranetPlugin(providerData.getType());
+            defaultSetting.addIntranetPlugin(pluginInfo.getType());
           }
         }
       }
