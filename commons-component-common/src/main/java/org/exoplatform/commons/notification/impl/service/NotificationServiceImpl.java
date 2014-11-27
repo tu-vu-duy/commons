@@ -178,11 +178,12 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
       return;
     }
     try {
+      notification.setLastModifiedDate(Calendar.getInstance());
+      notification.setId(new NotificationInfo().getId());
       String message = dataStorage.buildUIMessage(notification);
       WebSocketBootstrap.sendMessage(WebSocketServer.NOTIFICATION_WEB_IDENTIFIER, notification.getTo(),
                                      new JsonObject().putString("message", message).encode());
       //
-      notification.setLastModifiedDate(Calendar.getInstance());
       dataStorage.save(notification);
     } catch (Exception e) {
       LOG.error("Failed to connect with server : " + e, e.getMessage());
