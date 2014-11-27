@@ -60,6 +60,7 @@ public class IntranetNotificationDataStorageImpl extends AbstractService impleme
       List<NotificationInfo> current = tempStorage.get(notificationInfo.getTo());
       if (current == null) {
         current = new LinkedList<NotificationInfo>();
+        tempStorage.put(notificationInfo.getTo(), current);
       }
       if (current.contains(notificationInfo)) {
         current.remove(notificationInfo);
