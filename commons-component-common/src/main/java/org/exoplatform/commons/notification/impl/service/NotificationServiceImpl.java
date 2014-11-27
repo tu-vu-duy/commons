@@ -32,6 +32,7 @@ import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugi
 import org.exoplatform.commons.api.notification.service.QueueMessage;
 import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
 import org.exoplatform.commons.api.notification.service.setting.UserSettingService;
+import org.exoplatform.commons.api.notification.service.storage.IntranetNotificationDataStorage;
 import org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage;
 import org.exoplatform.commons.api.notification.service.storage.NotificationService;
 import org.exoplatform.commons.api.notification.service.template.DigestorService;
@@ -54,14 +55,18 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
   /** */
   private final NotificationDataStorage storage;
   /** */
+  private final IntranetNotificationDataStorage dataStorage;
+  /** */
   private final DigestorService digestorService;
   /** */
   private final UserSettingService userService;
 
-  public NotificationServiceImpl(UserSettingService userService, DigestorService digestorService, NotificationDataStorage storage) {
+  public NotificationServiceImpl(UserSettingService userService, DigestorService digestorService,
+                                 NotificationDataStorage storage, IntranetNotificationDataStorage dataStorage) {
     this.userService = userService;
     this.digestorService = digestorService;
     this.storage = storage;
+    this.dataStorage = dataStorage;
   }
   
   @Override
@@ -133,8 +138,8 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     for (String userId : userIds) {
       UserSetting userSetting = notificationService.get(userId);
       //
-      if (userSetting.isIntranetActive() &&  userSetting.isInInstantly(pluginId)) {
-        sendNotif(notification.clone().setTo(userId));
+      if (userSetting.isIntranetActive() &&  userSetting.isInIntranet(pluginId)) {
+        sendIntranetNotification(notification.clone().setTo(userId));
       }
     }
   }
@@ -166,18 +171,19 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
     }
   }
 
-  private void sendNotif(NotificationInfo notification) {
+  private void sendIntranetNotification(NotificationInfo notification) {
     NotificationContext nCtx = NotificationContextImpl.cloneInstance();
     AbstractNotificationPlugin plugin = nCtx.getPluginContainer().getPlugin(notification.getKey());
     if (plugin == null) {
       return;
     }
     try {
-      nCtx.setNotificationInfo(notification);
-      String message = plugin.buildUIMessage(nCtx);
-      JsonObject jsonObject = new JsonObject();
-      jsonObject.putString("message", message);
-      WebSocketBootstrap.sendMessage(WebSocketServer.NOTIFICATION_WEB_IDENTIFIER, notification.getTo(), jsonObject.encode());
+      String message = dataStorage.buildUIMessage(notification);
+      WebSocketBootstrap.sendMessage(WebSocketServer.NOTIFICATION_WEB_IDENTIFIER, notification.getTo(),
+                                     new JsonObject().putString("message", message).encode());
+      //
+      notification.setLastModifiedDate(Calendar.getInstance());
+      dataStorage.save(notification);
     } catch (Exception e) {
       LOG.error("Failed to connect with server : " + e, e.getMessage());
     }

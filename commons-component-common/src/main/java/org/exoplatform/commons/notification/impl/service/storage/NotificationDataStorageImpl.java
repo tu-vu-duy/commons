@@ -245,6 +245,7 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
       .setOwnerParameter(node.getProperty(NTF_OWNER_PARAMETER).getValues())
       .setSendToDaily(NotificationUtils.valuesToArray(node.getProperty(NTF_SEND_TO_DAILY).getValues()))
       .setSendToWeekly(NotificationUtils.valuesToArray(node.getProperty(NTF_SEND_TO_WEEKLY).getValues()))
+      .setLastModifiedDate(node.getProperty(EXO_LAST_MODIFIED_DATE).getDate())
       .setId(node.getName());
 
     return message;
