@@ -58,7 +58,15 @@ public interface PluginSettingService {
    * @param pluginId Id of the saved plugin.
    * @param isActive If "true", the plugin is active. If "false", the plugin is inactive.
    */
-  void savePlugin(String pluginId, boolean isActive);
+  void saveActivePlugin(String channelId, String pluginId, boolean isActive);
+
+  /**
+   * the channelId is email channel.
+   * @param pluginId
+   * @param isActive
+   * @deprecated user isActive(String channelId, String pluginId);
+   */
+  void saveActive(String pluginId, boolean isActive);
 
   /**
    * Checks if a plugin is active or inactive.
@@ -66,44 +74,34 @@ public interface PluginSettingService {
    * @param pluginId Id of the plugin.
    * @return The returned value is "true" if the plugin is active or "false" if the plugin is inactive.
    */
+  boolean isActive(String channelId, String pluginId);
+
+  /**
+   * the channelId is email channel.
+   * @param pluginId
+   * @return
+   * @deprecated user isActive(String channelId, String pluginId);
+   */
   boolean isActive(String pluginId);
 
   /**
-   * Saves active intranet notification.
-   * 
-   * @param pluginId Id of the saved plugin.
-   * @param isActive If is "true", the plugin will send intranet notification 
-   *        or "false" if the plugin is inactive send intranet notification.
-   */
-  void saveInetanetPlugin(String pluginId, boolean isActive);
-  
-  /**
-   * Checks if a plugin is active or inactive.
-   * 
-   * @param pluginId Id of the plugin.
-   * @return The returned value is "true" if the plugin is active send intranet notification 
-   *         or "false" if the plugin is inactive send intranet notification.
-   */
-  boolean isIntranetActive(String pluginId);
-  
-  /**
-   * Gets all Ids of active plugins.
+   * Gets all Ids of active plugins by channel.
    * 
    * @return Ids of the active plugins.
    */
-  List<String> getActivePluginIds();
+  List<String> getActivePluginIds(String channelId);
 
   /**
-   * Gets information of all active plugins to send email notification.
+   * Gets information of all active plugins by channel.
    * 
    * @return Information of the active plugins.
    */
-  List<PluginInfo> getActivePlugins();
+  List<PluginInfo> getActivePlugins(String channelId);
   /**
-   * Gets information of all active plugins to send intranet notification.
+   * Gets information of all plugins.
    * 
-   * @return Information of the active plugins.
+   * @return Information of the plugins.
    */
-  List<PluginInfo> getIntranetActivePlugins();
+  List<PluginInfo> getAllPlugins();
 
 }

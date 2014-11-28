@@ -79,7 +79,7 @@ public interface UserSettingService {
    * @param pluginId Id of the plugin.
    * @return The remote Ids of users.
    */
-  List<String> getUserHasIntranetNotifSetting(String pluginId);
+  List<String> getUserHasNotifSetting(String channelId, String pluginId);
   
   /**
    * Adds the default settings to a user's node.

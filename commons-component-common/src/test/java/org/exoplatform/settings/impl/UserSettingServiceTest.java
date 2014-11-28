@@ -91,10 +91,10 @@ public class UserSettingServiceTest extends BaseCommonsTestCase {
   private UserSetting createUserSetting(String userId, List<String> instantly, List<String> daily, List<String> weekly) {
     UserSetting model = new UserSetting();
     model.setUserId(userId);
-    model.setActive(true);
-    model.setDailyProviders(daily);
-    model.setInstantlyProviders(instantly);
-    model.setWeeklyProviders(weekly);
+    model.setChannelActive(UserSetting.EMAIL_CHANNEL);
+    model.setDailyPlugins(daily);
+    model.setInstantlyPlugins(instantly);
+    model.setWeeklyPlugins(weekly);
     return model;
   }
   

@@ -99,14 +99,14 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
     try {
       boolean isWeekly = context.value(NotificationJob.JOB_WEEKLY);
       if (isWeekly) {
-        for (String pluginId : setting.getWeeklyProviders()) {
+        for (String pluginId : setting.getWeeklyPlugins()) {
           putMap(notificationData, NotificationKey.key(pluginId), getWeeklyNotifs(sProvider, pluginId, setting.getUserId()));
         }
       }
       //
       boolean isDaily = context.value(NotificationJob.JOB_DAILY);
       if (isDaily) {
-        for (String pluginId : setting.getDailyProviders()) {
+        for (String pluginId : setting.getDailyPlugins()) {
           putMap(notificationData, NotificationKey.key(pluginId), getDailyNotifs(sProvider, context, pluginId, setting.getUserId()));
         }
       }

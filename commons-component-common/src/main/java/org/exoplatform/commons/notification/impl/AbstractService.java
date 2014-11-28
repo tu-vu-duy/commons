@@ -44,10 +44,6 @@ public abstract class AbstractService {
 
   public static final String EXO_INSTANTLY            = "exo:instantly";
   
-  public static final String EXO_IS_INTRANET_ACTIVE   = "exo:isIntranetActive";
-  
-  public static final String EXO_INTRANET_NOTIF       = "exo:intranetNotification";
-
   public static final String EXO_DAILY                = "exo:daily";
 
   public static final String EXO_WEEKLY               = "exo:weekly";

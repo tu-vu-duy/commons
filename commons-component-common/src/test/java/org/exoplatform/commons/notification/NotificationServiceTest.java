@@ -76,8 +76,8 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
   public void testNormalGetByUserAndRemoveMessagesSent() throws Exception {
     NotificationInfo notification = saveNotification("root", "demo");
     UserSetting userSetting = UserSetting.getInstance();
-    userSetting.setUserId("root").addProvider(PluginTest.ID, FREQUENCY.DAILY);
-    userSetting.setActive(true);
+    userSetting.setUserId("root").addPlugin(PluginTest.ID, FREQUENCY.DAILY);
+    userSetting.setChannelActive(UserSetting.EMAIL_CHANNEL);
     NotificationContext context = NotificationContextImpl.cloneInstance();
     context.append(NotificationJob.JOB_DAILY, true);
     String dayName = String.valueOf(Calendar.getInstance().get(Calendar.DAY_OF_MONTH));
@@ -100,7 +100,7 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     context.append(NotificationJob.JOB_DAILY, false);
     context.append(NotificationJob.JOB_WEEKLY, true);
     
-    userSetting.setUserId("demo").addProvider(PluginTest.ID, FREQUENCY.WEEKLY);
+    userSetting.setUserId("demo").addPlugin(PluginTest.ID, FREQUENCY.WEEKLY);
     map = notificationDataStorage.getByUser(context, userSetting);
     list = map.get(new NotificationKey(PluginTest.ID));
     assertEquals(1, list.size());
@@ -120,8 +120,8 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     notificationDataStorage.save(notification);
     
     UserSetting userSetting = UserSetting.getInstance();
-    userSetting.setUserId("root").addProvider(PluginTest.ID, FREQUENCY.DAILY);
-    userSetting.setActive(true);
+    userSetting.setUserId("root").addPlugin(PluginTest.ID, FREQUENCY.DAILY);
+    userSetting.setChannelActive(UserSetting.EMAIL_CHANNEL);
     // Test send to daily
     NotificationContext context = NotificationContextImpl.cloneInstance();
     context.append(NotificationJob.JOB_DAILY, true);
@@ -152,7 +152,7 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     context = NotificationContextImpl.cloneInstance();
     context.append(NotificationJob.JOB_DAILY, false);
     context.append(NotificationJob.JOB_WEEKLY, true);
-    userSetting.setUserId("demo").addProvider(PluginTest.ID, FREQUENCY.WEEKLY);
+    userSetting.setUserId("demo").addPlugin(PluginTest.ID, FREQUENCY.WEEKLY);
     map = notificationDataStorage.getByUser(context, userSetting);
     list = map.get(new NotificationKey(PluginTest.ID));
     assertEquals(1, list.size());
@@ -175,8 +175,8 @@ public class NotificationServiceTest extends BaseCommonsTestCase {
     NotificationInfo notification = saveNotification(userNameSpecial, "demo");
     //
     UserSetting userSetting = UserSetting.getInstance();
-    userSetting.setUserId(userNameSpecial).addProvider(PluginTest.ID, FREQUENCY.DAILY);
-    userSetting.setActive(true);
+    userSetting.setUserId(userNameSpecial).addPlugin(PluginTest.ID, FREQUENCY.DAILY);
+    userSetting.setChannelActive(UserSetting.EMAIL_CHANNEL);
     //
     Map<NotificationKey, List<NotificationInfo>> map = notificationDataStorage.getByUser(context, userSetting);
     List<NotificationInfo> list = map.get(new NotificationKey(PluginTest.ID));

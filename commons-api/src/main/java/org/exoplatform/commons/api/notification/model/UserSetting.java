@@ -18,7 +18,9 @@ package org.exoplatform.commons.api.notification.model;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
 import org.exoplatform.container.PortalContainer;
@@ -33,6 +35,10 @@ import org.exoplatform.container.PortalContainer;
  */
 public class UserSetting {
   private static UserSetting defaultSetting = null;
+
+  public static String EMAIL_CHANNEL = "email";
+
+  public static String INTRANET_CHANNEL = "intranet";
   
   public enum FREQUENCY {
     INSTANTLY, DAILY, WEEKLY;
@@ -47,27 +53,27 @@ public class UserSetting {
     }
   }
 
-  private boolean     isActive = true;
-
-  private boolean     isIntranetActive = true;
+  private List<String> channelActives;
 
   private Calendar     lastUpdateTime;
 
   private String       userId;
 
-  private List<String> intranetPlugins;
+  private Map<String, List<String>> channelPlugins;
 
-  private List<String> instantlyProviders;
+  private List<String> instantlyPlugins;
 
-  private List<String> dailyProviders;
+  private List<String> dailyPlugins;
 
-  private List<String> weeklyProviders;
+  private List<String> weeklyPlugins;
 
   public UserSetting() {
-    this.intranetPlugins = new ArrayList<String>();
-    this.instantlyProviders = new ArrayList<String>();
-    this.dailyProviders = new ArrayList<String>();
-    this.weeklyProviders = new ArrayList<String>();
+    this.channelActives = new ArrayList<String>();
+    this.channelPlugins = new HashMap<String, List<String>>();
+    //
+    this.instantlyPlugins = new ArrayList<String>();
+    this.dailyPlugins = new ArrayList<String>();
+    this.weeklyPlugins = new ArrayList<String>();
     this.lastUpdateTime = Calendar.getInstance();
   }
   
@@ -76,31 +82,40 @@ public class UserSetting {
   }
 
   /**
-   * @return the isActive
+   * @return
    */
-  public boolean isActive() {
-    return isActive;
+  public List<String> getChannelActives() {
+    return channelActives;
   }
-
-  /**
-   * @param isActive the isActive to set
-   */
-  public void setActive(boolean isActive) {
-    this.isActive = isActive;
-  }
-
+  
   /**
    * @return
    */
-  public boolean isIntranetActive() {
-    return isIntranetActive;
+  public boolean isChannelActive(String channelId) {
+    return channelActives.contains(channelId);
   }
 
   /**
-   * @param isIntranetActive
+   * @param channelId
    */
-  public void setIntranetActive(boolean isIntranetActive) {
-    this.isIntranetActive = isIntranetActive;
+  public void setChannelActive(String channelId) {
+    channelActives.add(channelId);
+  }
+
+  /**
+   * @param channelId
+   */
+  public void removeChannelActive(String channelId) {
+    if(channelActives.contains(channelId)) {
+      channelActives.remove(channelId);
+    }
+  }
+  
+  /**
+   * @param channelActives
+   */
+  public void setChannelActives(List<String> channelActives) {
+    this.channelActives = channelActives;
   }
 
   /**
@@ -134,112 +149,134 @@ public class UserSetting {
   }
 
   /**
-   * @return the intranetPlugins
+   * @return the all channelPlugins
    */
-  public List<String> getIntranetPlugins() {
-    return intranetPlugins;
+  public void setAllChannelPlugins(Map<String, List<String>> channelPlugins) {
+    this.channelPlugins = channelPlugins;
+  }
+  
+  /**
+   * @return the all channelPlugins
+   */
+  public Map<String, List<String>> getAllChannelPlugins() {
+    return channelPlugins;
   }
 
   /**
-   * @param intranetPlugins the intranetPlugins to set
+   * @return the channelPlugins
    */
-  public void setIntranetPlugins(List<String> intranetPlugins) {
-    this.intranetPlugins = intranetPlugins;
+  public List<String> getPlugins(String channelId) {
+    List<String> channelPlugins = this.channelPlugins.get(channelId);
+    if (channelPlugins == null) {
+      channelPlugins = new ArrayList<String>();
+      this.channelPlugins.put(channelId, channelPlugins);
+    }
+    return channelPlugins;
   }
 
   /**
-   * @param intranetPluginId the intranetPlugin to add
+   * @param channelId
+   * @param pluginIds
    */
-  public void addIntranetPlugin(String intranetPluginId) {
-    this.intranetPlugins.add(intranetPluginId);
+  public void setChannelPlugins(String channelId, List<String> pluginIds) {
+    this.channelPlugins.put(channelId, pluginIds);
   }
 
   /**
-   * @return the instantlyProviders
+   * Add the pluginId by channel
+   * @param channelId
+   * @param pluginId
    */
-  public List<String> getInstantlyProviders() {
-    return instantlyProviders;
+  public void addChannelPlugin(String channelId, String pluginId) {
+    getPlugins(channelId).add(pluginId);
   }
 
   /**
-   * @param instantlyProviders the instantlyProviders to set
+   * @return the instantlyPlugins
    */
-  public void setInstantlyProviders(List<String> instantlyProviders) {
-    this.instantlyProviders = instantlyProviders;
+  public List<String> getInstantlyPlugins() {
+    return instantlyPlugins;
   }
 
   /**
-   * @return the dailyProviders
+   * @param instantlyPlugins the instantlyPlugins to set
    */
-  public List<String> getDailyProviders() {
-    return dailyProviders;
+  public void setInstantlyPlugins(List<String> instantlyPlugins) {
+    this.instantlyPlugins = instantlyPlugins;
   }
 
   /**
-   * @param dailyProviders the dailyProviders to set
+   * @return the dailyPlugins
    */
-  public void setDailyProviders(List<String> dailyProviders) {
-    this.dailyProviders = dailyProviders;
+  public List<String> getDailyPlugins() {
+    return dailyPlugins;
   }
 
   /**
-   * @return the weeklyProviders
+   * @param dailyPlugins the dailyPlugins to set
    */
-  public List<String> getWeeklyProviders() {
-    return weeklyProviders;
+  public void setDailyPlugins(List<String> dailyPlugins) {
+    this.dailyPlugins = dailyPlugins;
   }
 
   /**
-   * @param weeklyProviders the weeklyProviders to set
+   * @return the weeklyPlugins
    */
-  public void setWeeklyProviders(List<String> weeklyProviders) {
-    this.weeklyProviders = weeklyProviders;
+  public List<String> getWeeklyPlugins() {
+    return weeklyPlugins;
+  }
+
+  /**
+   * @param weeklyPlugins the weeklyPlugins to set
+   */
+  public void setWeeklyPlugins(List<String> weeklyPlugins) {
+    this.weeklyPlugins = weeklyPlugins;
   }
 
 
   /**
-   * @param providerId the provider's id to add
+   * @param pluginId the provider's id to add
    */
-  public void addProvider(String providerId, FREQUENCY frequencyType) {
+  public void addPlugin(String pluginId, FREQUENCY frequencyType) {
     if (frequencyType.equals(FREQUENCY.DAILY)) {
-      addProperty(dailyProviders, providerId);
+      addProperty(dailyPlugins, pluginId);
     } else if (frequencyType.equals(FREQUENCY.WEEKLY)) {
-      addProperty(weeklyProviders, providerId);
+      addProperty(weeklyPlugins, pluginId);
     } else if (frequencyType.equals(FREQUENCY.INSTANTLY)) {
-      addProperty(instantlyProviders, providerId);
+      addProperty(instantlyPlugins, pluginId);
     }
   }
 
   /**
-   * @param providerId
+   * @param pluginId
    * @return
    */
-  public boolean isInInstantly(String providerId) {
-    return (instantlyProviders.contains(providerId)) ? true : false;
+  public boolean isInInstantly(String pluginId) {
+    return (instantlyPlugins.contains(pluginId)) ? true : false;
   }
 
   /**
-   * @param providerId
+   * @param pluginId
    * @return
    */
-  public boolean isInIntranet(String providerId) {
-    return (intranetPlugins.contains(providerId)) ? true : false;
+  public boolean isInChannel(String channelId, String pluginId) {
+    return (getPlugins(channelId).contains(pluginId));
   }
   
   /**
-   * @param providerId
+   * @param pluginId
    * @return
    */
-  public boolean isInDaily(String providerId) {
-    return (dailyProviders.contains(providerId)) ? true : false;
+  public boolean isInDaily(String pluginId) {
+    return (dailyPlugins.contains(pluginId)) ? true : false;
   }
 
   /**
-   * @param providerId
+   * @param pluginId
    * @return
    */
-  public boolean isInWeekly(String providerId) {
-    return (weeklyProviders.contains(providerId)) ? true : false;
+  public boolean isInWeekly(String pluginId) {
+    return (weeklyPlugins.contains(pluginId)) ? true : false;
   }
 
 
@@ -247,21 +284,21 @@ public class UserSetting {
     return isInDaily(pluginId) || isInWeekly(pluginId);
   }
 
-  private void addProperty(List<String> providers, String providerId) {
-    if (providers.contains(providerId) == false) {
-      providers.add(providerId);
+  private void addProperty(List<String> providers, String pluginId) {
+    if (providers.contains(pluginId) == false) {
+      providers.add(pluginId);
     }
   }
   
   @Override
   public UserSetting clone() {
     UserSetting setting = getInstance();
-    setting.setActive(isActive);
-    setting.setIntranetActive(isIntranetActive);
-    setting.setDailyProviders(dailyProviders);
-    setting.setWeeklyProviders(weeklyProviders);
-    setting.setInstantlyProviders(instantlyProviders);
-    setting.setIntranetPlugins(intranetPlugins);
+    setting.setChannelActives(channelActives);
+    setting.setDailyPlugins(dailyPlugins);
+    setting.setWeeklyPlugins(weeklyPlugins);
+    setting.setInstantlyPlugins(instantlyPlugins);
+    //
+    setting.setAllChannelPlugins(channelPlugins);
     setting.setUserId(userId);
     return setting;
   }
@@ -298,22 +335,18 @@ public class UserSetting {
     if (defaultSetting == null) {
       PluginSettingService settingService = (PluginSettingService) PortalContainer.getInstance()
                                               .getComponentInstanceOfType(PluginSettingService.class);
-      List<PluginInfo> emailPlugins = settingService.getActivePlugins();
-      List<PluginInfo> intranetPlugins = settingService.getIntranetActivePlugins();
+      List<PluginInfo> plugins = settingService.getAllPlugins();
       
       defaultSetting = getInstance();
-      defaultSetting.setActive(true);
-      for (PluginInfo pluginInfo : emailPlugins) {
-        for (String defaultConf : pluginInfo.getDefaultConfig()) {
-          defaultSetting.addProvider(pluginInfo.getType(), FREQUENCY.getFrequecy(defaultConf));
-        }
-      }
       //
-      defaultSetting.setIntranetActive(true);
-      for (PluginInfo pluginInfo : intranetPlugins) {
+      for (PluginInfo pluginInfo : plugins) {
         for (String defaultConf : pluginInfo.getDefaultConfig()) {
-          if(FREQUENCY.getFrequecy(defaultConf) == FREQUENCY.INSTANTLY) {
-            defaultSetting.addIntranetPlugin(pluginInfo.getType());
+          for (String channelId : pluginInfo.getAllChannelActive()) {
+            if (FREQUENCY.getFrequecy(defaultConf) == FREQUENCY.INSTANTLY && !EMAIL_CHANNEL.equals(channelId)) {
+              defaultSetting.addChannelPlugin(channelId, pluginInfo.getType());
+            } else {
+              defaultSetting.addPlugin(pluginInfo.getType(), FREQUENCY.getFrequecy(defaultConf));
+            }
           }
         }
       }
