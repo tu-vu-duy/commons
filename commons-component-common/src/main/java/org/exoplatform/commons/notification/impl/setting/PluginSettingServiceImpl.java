@@ -75,7 +75,7 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
                   .setBundlePath(pluginConfig.getTemplateConfig().getBundlePath())
                   .setDefaultConfig(pluginConfig.getDefaultConfig());
       // for all chanel
-      pluginInfo.setChannelActives(getSettingPlugins(pluginConfig.getPluginId(), ""/*all channels*/));
+      pluginInfo.setChannelActives(getSettingPlugins(pluginConfig.getPluginId(), UserSetting.EMAIL_CHANNEL + "," + UserSetting.INTRANET_CHANNEL/*all channels*/));
       
       String groupId = pluginConfig.getGroupId();
       GroupConfig gConfig = pluginConfig.getGroupConfig();

@@ -18,7 +18,6 @@ package org.exoplatform.commons.notification.impl.setting;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -128,14 +127,14 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
     List<String> instantlys = getArrayListValue(userId, EXO_INSTANTLY, null);
     if (instantlys != null) {
       model.setUserId(userId);
-      model.setChannelActives(getArrayListValue(userId, EXO_IS_ACTIVE, Collections.<String> emptyList()));
+      model.setChannelActives(getArrayListValue(userId, EXO_IS_ACTIVE, new ArrayList<String>()));
       // for all channel to set plugin
-      model.setChannelPlugins(UserSetting.EMAIL_CHANNEL, getArrayListValue(userId, "exo:" + UserSetting.EMAIL_CHANNEL, Collections.<String> emptyList()));
-      model.setChannelPlugins(UserSetting.INTRANET_CHANNEL, getArrayListValue(userId, "exo:" + UserSetting.INTRANET_CHANNEL, Collections.<String> emptyList()));
+      model.setChannelPlugins(UserSetting.EMAIL_CHANNEL, getArrayListValue(userId, "exo:" + UserSetting.EMAIL_CHANNEL, new ArrayList<String>()));
+      model.setChannelPlugins(UserSetting.INTRANET_CHANNEL, getArrayListValue(userId, "exo:" + UserSetting.INTRANET_CHANNEL, new ArrayList<String>()));
       //
       model.setInstantlyPlugins(instantlys);
-      model.setDailyPlugins(getArrayListValue(userId, EXO_DAILY, Collections.<String> emptyList()));
-      model.setWeeklyPlugins(getArrayListValue(userId, EXO_WEEKLY, Collections.<String> emptyList()));
+      model.setDailyPlugins(getArrayListValue(userId, EXO_DAILY, new ArrayList<String>()));
+      model.setWeeklyPlugins(getArrayListValue(userId, EXO_WEEKLY, new ArrayList<String>()));
       //
     } else {
       model = UserSetting.getDefaultInstance().setUserId(userId);
@@ -153,13 +152,13 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
     SettingValue<String> values = getSettingValue(userId, propertyName);
     if (values != null) {
       String strs = values.getValue();
-      if("true".equals(strs)) {
+      if ("true".equals(strs)) {
         strs = UserSetting.EMAIL_CHANNEL;
       }
-      if("false".equals(strs)) {
+      if ("false".equals(strs)) {
         return new ArrayList<String>();
       }
-      return Arrays.asList(strs.split(","));
+      return new ArrayList<String>(Arrays.asList(strs.split(",")));
     }
     return defaultValue;
   }

@@ -138,7 +138,7 @@ public class PluginInfo {
    * @param channelActives
    */
   public PluginInfo setChannelActives(List<String> channelActives) {
-    this.channelActives = channelActives;
+    this.channelActives = new ArrayList<String>(channelActives);
     return this;
   }
 
