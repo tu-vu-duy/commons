@@ -129,8 +129,7 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
       model.setUserId(userId);
       model.setChannelActives(getArrayListValue(userId, EXO_IS_ACTIVE, new ArrayList<String>()));
       // for all channel to set plugin
-      model.setChannelPlugins(UserSetting.EMAIL_CHANNEL, getArrayListValue(userId, "exo:" + UserSetting.EMAIL_CHANNEL, new ArrayList<String>()));
-      model.setChannelPlugins(UserSetting.INTRANET_CHANNEL, getArrayListValue(userId, "exo:" + UserSetting.INTRANET_CHANNEL, new ArrayList<String>()));
+      model.setChannelPlugins(UserSetting.INTRANET_CHANNEL, getArrayListValue(userId, NAME_PATTERN + UserSetting.INTRANET_CHANNEL, new ArrayList<String>()));
       //
       model.setInstantlyPlugins(instantlys);
       model.setDailyPlugins(getArrayListValue(userId, EXO_DAILY, new ArrayList<String>()));

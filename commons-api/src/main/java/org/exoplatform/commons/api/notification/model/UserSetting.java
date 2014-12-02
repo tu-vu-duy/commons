@@ -99,14 +99,16 @@ public class UserSetting {
    * @param channelId
    */
   public void setChannelActive(String channelId) {
-    channelActives.add(channelId);
+    if(!isChannelActive(channelId)) {
+      channelActives.add(channelId);
+    }
   }
 
   /**
    * @param channelId
    */
   public void removeChannelActive(String channelId) {
-    if(channelActives.contains(channelId)) {
+    if(isChannelActive(channelId)) {
       channelActives.remove(channelId);
     }
   }
