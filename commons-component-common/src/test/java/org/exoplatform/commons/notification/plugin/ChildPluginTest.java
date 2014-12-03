@@ -34,7 +34,7 @@ public class ChildPluginTest extends AbstractNotificationChildPlugin {
     NotificationInfo notification = ctx.getNotificationInfo();
 
     String language = getLanguage(notification);
-    TemplateContext templateContext = new TemplateContext(getId(), language);
+    TemplateContext templateContext = new TemplateContext("email", getId(), language);
 
     String childContent = notification.getValueOwnerParameter("CHILD_VALUE");
     templateContext.put("CONTENT", childContent);
@@ -52,11 +52,4 @@ public class ChildPluginTest extends AbstractNotificationChildPlugin {
   public boolean isValid(NotificationContext ctx) {
     return false;
   }
-
-  @Override
-  protected String makeUIMessage(NotificationContext ctx) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
 }

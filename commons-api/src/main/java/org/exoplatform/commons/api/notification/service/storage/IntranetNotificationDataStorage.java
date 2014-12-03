@@ -32,13 +32,6 @@ public interface IntranetNotificationDataStorage {
   void save(NotificationInfo notification) throws Exception;
 
   /**
-   * @param notificationInfo
-   * @return
-   * @throws Exception
-   */
-  String buildUIMessage(NotificationInfo notificationInfo) throws Exception;
-
-  /**
    * 
    * @param userId
    * @param id the NotificationInfo's id
@@ -83,4 +76,5 @@ public interface IntranetNotificationDataStorage {
    */
   boolean remove(int days) throws Exception;
   
+  public String getChannelId();
 }

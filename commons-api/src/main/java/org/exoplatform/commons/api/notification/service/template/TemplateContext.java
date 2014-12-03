@@ -25,6 +25,8 @@ public class TemplateContext extends HashMap<String, Object> {
 
   private String            pluginId;
 
+  private String            channelId;
+
   private String            language;
 
   private int               digestSize       = 0;
@@ -35,7 +37,8 @@ public class TemplateContext extends HashMap<String, Object> {
     
   }
 
-  public TemplateContext(String pluginId, String language) {
+  public TemplateContext(String channelId, String pluginId, String language) {
+    this.channelId = channelId;
     this.pluginId = pluginId;
     this.language = language;
   }
@@ -57,8 +60,13 @@ public class TemplateContext extends HashMap<String, Object> {
     return this;
   }
 
-  public TemplateContext provider(String providerId) {
-    this.pluginId = providerId;
+  public TemplateContext channelId(String channelId) {
+    this.channelId = channelId;
+    return this;
+  }
+
+  public TemplateContext pluginId(String pluginId) {
+    this.pluginId = pluginId;
     return this;
   }
 
@@ -79,6 +87,13 @@ public class TemplateContext extends HashMap<String, Object> {
    */
   public String getPluginId() {
     return pluginId;
+  }
+
+  /**
+   * @return the channelId
+   */
+  public String getChannelId() {
+    return channelId;
   }
 
   /**

@@ -44,11 +44,6 @@ public class NotificationCommandImpl implements NotificationCommand {
   }
 
   @Override
-  public MessageInfo processMessage(NotificationContext ctx) {
-    return plugin.buildMessage(ctx);
-  }
-
-  @Override
   public NotificationInfo processNotification(NotificationContext ctx) {
     return plugin.buildNotification(ctx);
   }

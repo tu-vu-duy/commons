@@ -22,13 +22,17 @@ import groovy.text.Template;
 import java.io.StringWriter;
 import java.io.Writer;
 
+import org.exoplatform.commons.api.notification.channel.AbstractChannel;
+import org.exoplatform.commons.api.notification.channel.AbstractChannelTemplateHandler;
 import org.exoplatform.commons.api.notification.model.NotificationKey;
+import org.exoplatform.commons.api.notification.plugin.AbstractNotificationChildPlugin;
+import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugin;
+import org.exoplatform.commons.api.notification.service.setting.ChannelManager;
 import org.exoplatform.commons.api.notification.service.setting.PluginContainer;
 import org.exoplatform.commons.api.notification.service.template.TemplateContext;
 import org.exoplatform.commons.api.notification.template.Element;
 import org.exoplatform.commons.api.notification.template.ElementVisitor;
 import org.exoplatform.commons.utils.CommonsUtils;
-
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
@@ -53,10 +57,15 @@ public class GroovyElementVisitor implements ElementVisitor {
     try {
       NotificationKey key = new NotificationKey(ctx.getPluginId());
       Template engine = null;
-      if (element instanceof IntranetGroovyElement) {
-        engine = CommonsUtils.getService(PluginContainer.class).getPlugin(key).getIntranetNotificationEngine();
+      AbstractNotificationPlugin plugin = CommonsUtils.getService(PluginContainer.class).getPlugin(key);
+      if (plugin instanceof AbstractNotificationChildPlugin) {
+        engine = ((AbstractNotificationChildPlugin) plugin).getTemplateEngine();
       } else {
-        engine = CommonsUtils.getService(PluginContainer.class).getPlugin(key).getTemplateEngine();
+        AbstractChannel channelPlugin = CommonsUtils.getService(ChannelManager.class).get(ctx.getChannelId());
+        if (channelPlugin != null) {
+          AbstractChannelTemplateHandler templateHandler = channelPlugin.getTemplateHandler(ctx.getPluginId());
+          engine = templateHandler.getChannelTemplateEngine().getTemplateEngine(ctx.getPluginId());
+        }
       }
       Writable writable = engine.make(getTemplateContext());
       writable.writeTo(writer);

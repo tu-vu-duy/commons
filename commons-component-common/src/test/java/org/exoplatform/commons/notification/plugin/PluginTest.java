@@ -17,18 +17,10 @@
 package org.exoplatform.commons.notification.plugin;
 
 import java.io.Writer;
-import java.util.List;
 
 import org.exoplatform.commons.api.notification.NotificationContext;
-import org.exoplatform.commons.api.notification.model.MessageInfo;
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
-import org.exoplatform.commons.api.notification.model.NotificationKey;
-import org.exoplatform.commons.api.notification.plugin.AbstractNotificationChildPlugin;
 import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugin;
-import org.exoplatform.commons.api.notification.service.setting.PluginContainer;
-import org.exoplatform.commons.api.notification.service.template.TemplateContext;
-import org.exoplatform.commons.notification.template.TemplateUtils;
-import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.container.xml.InitParams;
 
 public class PluginTest extends AbstractNotificationPlugin {
@@ -61,40 +53,8 @@ public class PluginTest extends AbstractNotificationPlugin {
 
   
   @Override
-  protected MessageInfo makeMessage(NotificationContext ctx) {
-    NotificationInfo notification = ctx.getNotificationInfo();
-    String language = getLanguage(notification);
-    TemplateContext templateContext = new TemplateContext(notification.getKey().getId(), language);
-    
-    
-    templateContext.put("USER", notification.getValueOwnerParameter("USER"));
-    templateContext.put("SUBJECT", "Test plugin notification");
-    String subject = TemplateUtils.processSubject(templateContext);
-
-    String value = notification.getValueOwnerParameter("TEST_VALUE");
-    templateContext.put("VALUE", value);
-    StringBuilder childContent = new StringBuilder();
-    
-    PluginContainer pluginContainer = CommonsUtils.getService(PluginContainer.class);
-    List<NotificationKey> childKeys = pluginContainer.getChildPluginKeys(getKey());
-    for (NotificationKey notificationKey : childKeys) {
-      AbstractNotificationPlugin child = pluginContainer.getPlugin(notificationKey);
-      childContent.append("<br>").append(((AbstractNotificationChildPlugin) child).makeContent(ctx));
-    }
-    templateContext.put("CHILD_CONTENT", childContent.toString());
-    
-    return new MessageInfo().subject(subject).body(TemplateUtils.processGroovy(templateContext)).end();
-  }
-
-  @Override
   protected boolean makeDigest(NotificationContext ctx, Writer writer) {
     return false;
-  }
-
-  @Override
-  protected String makeUIMessage(NotificationContext ctx) {
-    // TODO Auto-generated method stub
-    return null;
   }
 
 }

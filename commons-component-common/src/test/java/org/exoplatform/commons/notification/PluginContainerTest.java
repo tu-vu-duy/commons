@@ -23,6 +23,7 @@ import org.exoplatform.commons.api.notification.model.MessageInfo;
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugin;
+import org.exoplatform.commons.api.notification.service.setting.ChannelManager;
 import org.exoplatform.commons.api.notification.service.setting.PluginContainer;
 import org.exoplatform.commons.api.notification.service.template.TemplateContext;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
@@ -67,7 +68,9 @@ public class PluginContainerTest extends BaseCommonsTestCase {
     assertEquals(PluginTest.ID, notificationInfo.getKey().getId());
     //
     ctx.setNotificationInfo(notificationInfo);
-    MessageInfo messageInfo = plugin.buildMessage(ctx);
+    //
+    ChannelManager channelManager = getService(ChannelManager.class);
+    MessageInfo messageInfo = channelManager.get("email").getTemplateHandler(PluginTest.ID).makeMessage(ctx);
 
     // check subject
     assertEquals("The subject Test plugin notification", messageInfo.getSubject());
@@ -84,7 +87,7 @@ public class PluginContainerTest extends BaseCommonsTestCase {
   }
 
   public void testRenderPlugin() throws Exception {
-    TemplateContext ctx = new TemplateContext("DigestDailyPlugin", null);
+    TemplateContext ctx = new TemplateContext("email", "DigestDailyPlugin", null);
     ctx.put("FIRSTNAME", "User ROOT");
     ctx.put("USER", "root");
     ctx.put("ACTIVITY", "Content of Activity");

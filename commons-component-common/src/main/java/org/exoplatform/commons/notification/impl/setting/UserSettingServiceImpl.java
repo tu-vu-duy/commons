@@ -31,6 +31,7 @@ import javax.jcr.query.QueryManager;
 
 import org.exoplatform.commons.api.notification.NotificationContext;
 import org.exoplatform.commons.api.notification.model.UserSetting;
+import org.exoplatform.commons.api.notification.service.setting.ChannelManager;
 import org.exoplatform.commons.api.notification.service.setting.UserSettingService;
 import org.exoplatform.commons.api.settings.SettingService;
 import org.exoplatform.commons.api.settings.SettingValue;
@@ -53,11 +54,11 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   private static final Log LOG = ExoLogger.getLogger(UserSettingServiceImpl.class);
 
   /** Setting Scope on Common Setting **/
-  private static final Scope      NOTIFICATION_SCOPE = Scope.GLOBAL;
-  
-  private SettingService            settingService;
+  private static final Scope    NOTIFICATION_SCOPE = Scope.GLOBAL;
+  private SettingService        settingService;
+  private ChannelManager        channelManager;
 
-  private final String                    workspace;
+  private final String          workspace;
 
   protected static final int MAX_LIMIT = 30;
 
@@ -65,9 +66,11 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   
   transient final ReentrantLock lock = new ReentrantLock();
   
-  public UserSettingServiceImpl(SettingService settingService, NotificationConfiguration configuration) {
+  public UserSettingServiceImpl(SettingService settingService, NotificationConfiguration configuration,
+                                ChannelManager channelManager) {
     this.settingService = settingService;
     this.workspace = configuration.getWorkspace();
+    this.channelManager = channelManager;
   }
 
   private Node getUserSettingHome(Session session) throws Exception {
@@ -129,7 +132,10 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
       model.setUserId(userId);
       model.setChannelActives(getArrayListValue(userId, EXO_IS_ACTIVE, new ArrayList<String>()));
       // for all channel to set plugin
-      model.setChannelPlugins(UserSetting.INTRANET_CHANNEL, getArrayListValue(userId, NAME_PATTERN + UserSetting.INTRANET_CHANNEL, new ArrayList<String>()));
+      List<String> channels = channelManager.getChannelIds();
+      for (String channelId : channels) {
+        model.setChannelPlugins(channelId, getArrayListValue(userId, NAME_PATTERN + channelId, new ArrayList<String>()));
+      }
       //
       model.setInstantlyPlugins(instantlys);
       model.setDailyPlugins(getArrayListValue(userId, EXO_DAILY, new ArrayList<String>()));

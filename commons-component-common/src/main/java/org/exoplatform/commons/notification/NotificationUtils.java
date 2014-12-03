@@ -29,7 +29,8 @@ import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
 import org.apache.commons.lang.StringUtils;
-import org.exoplatform.commons.api.notification.plugin.config.TemplateConfig;
+import org.exoplatform.commons.api.notification.model.ArgumentLiteral;
+import org.exoplatform.commons.api.notification.plugin.config.PluginConfig;
 import org.exoplatform.commons.api.notification.template.Element;
 import org.exoplatform.commons.notification.template.DigestTemplate;
 import org.exoplatform.commons.notification.template.SimpleElement;
@@ -62,6 +63,8 @@ public class NotificationUtils {
   private static final String styleCSS = " style=\"color: #2f5e92; text-decoration: none;\"";
   
   private static final String userClass = "class=\"user-name text-bold\"";
+
+  public final static ArgumentLiteral<String> CHANNEL_ID = new ArgumentLiteral<String>(String.class, "channelId");
   
   public static String getDefaultKey(String key, String providerId) {
     return MessageFormat.format(key, providerId);
@@ -92,11 +95,11 @@ public class NotificationUtils {
    * @param language
    * @return
    */
-  public static DigestTemplate getDigest(TemplateConfig templateConfig, String pluginId, String language) {
-    String srcResource = templateConfig.getBundlePath();
-    String digestOneKey = templateConfig.getKeyValue(TemplateConfig.DIGEST_ONE_KEY, getDefaultKey(DEFAULT_DIGEST_ONE_KEY, pluginId));
-    String digestThreeKey = templateConfig.getKeyValue(TemplateConfig.DIGEST_THREE_KEY, getDefaultKey(DEFAULT_DIGEST_THREE_KEY, pluginId));
-    String digestMoreKey = templateConfig.getKeyValue(TemplateConfig.DIGEST_MORE_KEY, getDefaultKey(DEFAULT_DIGEST_MORE_KEY, pluginId));
+  public static DigestTemplate getDigest(PluginConfig pluginConfig, String pluginId, String language) {
+    String srcResource = pluginConfig.getBundlePath();
+    String digestOneKey = pluginConfig.getKeyValue(PluginConfig.DIGEST_ONE_KEY, getDefaultKey(DEFAULT_DIGEST_ONE_KEY, pluginId));
+    String digestThreeKey = pluginConfig.getKeyValue(PluginConfig.DIGEST_THREE_KEY, getDefaultKey(DEFAULT_DIGEST_THREE_KEY, pluginId));
+    String digestMoreKey = pluginConfig.getKeyValue(PluginConfig.DIGEST_MORE_KEY, getDefaultKey(DEFAULT_DIGEST_MORE_KEY, pluginId));
     
     Locale locale = getLocale(language);
     
@@ -115,9 +118,9 @@ public class NotificationUtils {
    * @param language
    * @return
    */
-  public static Element getSubject(TemplateConfig templateConfig, String pluginId, String language) {
-    String bundlePath = templateConfig.getBundlePath();
-    String subjectKey = templateConfig.getKeyValue(TemplateConfig.SUBJECT_KEY, getDefaultKey(DEFAULT_SUBJECT_KEY, pluginId));
+  public static Element getSubject(PluginConfig pluginConfig, String pluginId, String language) {
+    String bundlePath = pluginConfig.getBundlePath();
+    String subjectKey = pluginConfig.getKeyValue(PluginConfig.SUBJECT_KEY, getDefaultKey(DEFAULT_SUBJECT_KEY, pluginId));
     
     Locale locale = getLocale(language);
     

@@ -38,8 +38,6 @@ public class UserSetting {
 
   public static String EMAIL_CHANNEL = "email";
 
-  public static String INTRANET_CHANNEL = "intranet";
-  
   public enum FREQUENCY {
     INSTANTLY, DAILY, WEEKLY;
 

@@ -66,18 +66,18 @@ public class DigestorServiceImpl implements DigestorService {
       messageInfo = new MessageInfo();
       NotificationPluginContainer containerService = CommonsUtils.getService(NotificationPluginContainer.class);
       
-      List<String> activeProviders = jobContext.getPluginSettingService().getActivePluginIds(UserSetting.EMAIL_CHANNEL);
-      NotificationContext nCtx = NotificationContextImpl.cloneInstance();
+      List<String> activePlugins = jobContext.getPluginSettingService().getActivePluginIds(UserSetting.EMAIL_CHANNEL);
+      NotificationContext nCtx = NotificationContextImpl.cloneInstance().append(NotificationUtils.CHANNEL_ID, UserSetting.EMAIL_CHANNEL);
       
       Writer writer = new StringWriter();
 
-      for (String providerId : activeProviders) {
-        List<NotificationInfo> messages = notificationData.get(NotificationKey.key(providerId));
+      for (String pluginId : activePlugins) {
+        List<NotificationInfo> messages = notificationData.get(NotificationKey.key(pluginId));
         if (messages == null || messages.size() == 0){
           continue;
         }
         
-        AbstractNotificationPlugin plugin = containerService.getPlugin(NotificationKey.key(providerId));
+        AbstractNotificationPlugin plugin = containerService.getPlugin(NotificationKey.key(pluginId));
         nCtx.setNotificationInfos(messages);
         plugin.buildDigest(nCtx, writer);
       }
@@ -106,7 +106,7 @@ public class DigestorServiceImpl implements DigestorService {
 
       DigestInfo digestInfo = new DigestInfo(jobContext, userSetting);
 
-      TemplateContext ctx = new TemplateContext(digestInfo.getPluginId(), digestInfo.getLocale().getLanguage());
+      TemplateContext ctx = new TemplateContext(UserSetting.EMAIL_CHANNEL, digestInfo.getPluginId(), digestInfo.getLocale().getLanguage());
 
       ctx.put("FIRSTNAME", digestInfo.getFirstName());
       ctx.put("PORTAL_NAME", digestInfo.getPortalName());

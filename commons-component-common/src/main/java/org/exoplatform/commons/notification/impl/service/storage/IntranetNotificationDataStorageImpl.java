@@ -26,8 +26,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.jcr.Node;
 
 import org.exoplatform.commons.api.notification.NotificationContext;
+import org.exoplatform.commons.api.notification.channel.AbstractChannel;
+import org.exoplatform.commons.api.notification.channel.AbstractChannelTemplateHandler;
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
-import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugin;
 import org.exoplatform.commons.api.notification.service.storage.IntranetNotificationDataStorage;
 import org.exoplatform.commons.notification.NotificationConfiguration;
 import org.exoplatform.commons.notification.impl.AbstractService;
@@ -40,6 +41,7 @@ import org.exoplatform.services.log.Log;
 public class IntranetNotificationDataStorageImpl extends AbstractService implements IntranetNotificationDataStorage {
   private static final Log                    LOG         = ExoLogger.getLogger(IntranetNotificationDataStorageImpl.class);
   private String                              workspace;
+  private String                              channelId   = "intranet";
   private int                                 MENU_LIMIT  = 13;
   private final ReentrantLock                 lock        = new ReentrantLock();
   // userId + list object
@@ -116,7 +118,7 @@ public class IntranetNotificationDataStorageImpl extends AbstractService impleme
     List<NotificationInfo> notificationInfos = new ArrayList<NotificationInfo>();
     List<NotificationInfo> current = tempStorage.get(userId);
     if(current != null) {
-      if(current.size() > limit) {
+      if(current.size() > limit && limit > 0) {
         notificationInfos.addAll(current.subList(0, limit));
       } else {
         notificationInfos.addAll(current);
@@ -128,26 +130,19 @@ public class IntranetNotificationDataStorageImpl extends AbstractService impleme
   @Override
   public List<String> getNotificationContent(String userId, boolean isOnMenu) throws Exception {
     List<String> notifications = new ArrayList<String>();
-    List<NotificationInfo> notificationInfos = get(userId, MENU_LIMIT);
+    List<NotificationInfo> notificationInfos = get(userId, (isOnMenu) ? MENU_LIMIT : 0);
+    //
     for (NotificationInfo notificationInfo : notificationInfos) {
-      notifications.add(buildUIMessage(notificationInfo));
+      NotificationContext nCtx = NotificationContextImpl.cloneInstance().setNotificationInfo(notificationInfo);
+      AbstractChannel channelPlugin = nCtx.getChannelManager().get(channelId);
+      if (channelPlugin != null) {
+        AbstractChannelTemplateHandler templateHandler = channelPlugin.getTemplateHandler(notificationInfo.getKey().getId());
+        if (templateHandler != null) {
+          notifications.add(templateHandler.makeMessage(nCtx).getBody());
+        }
+      }
     }
     return notifications;
-  }
-
-  @Override
-  public String buildUIMessage(NotificationInfo notificationInfo) throws Exception {
-    NotificationContext nCtx = NotificationContextImpl.cloneInstance();
-    AbstractNotificationPlugin plugin = nCtx.getPluginContainer().getPlugin(notificationInfo.getKey());
-    if (plugin == null) {
-      return "";
-    }
-    try {
-      return plugin.buildUIMessage(nCtx.setNotificationInfo(notificationInfo));
-    } catch (Exception e) {
-      LOG.error("Failed to build UIMessage", e);
-    }
-    return "";
   }
 
   @Override
@@ -180,6 +175,14 @@ public class IntranetNotificationDataStorageImpl extends AbstractService impleme
       }
     }
     return false;
+  }
+  
+  public void setChannelId(String channelId) {
+    this.channelId = channelId;
+  }
+
+  public String getChannelId() {
+    return channelId;
   }
 
 }

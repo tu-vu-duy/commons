@@ -489,29 +489,23 @@
     <target-component>org.exoplatform.commons.api.notification.service.setting.PluginContainer</target-component>
     <component-plugin>
       <name>notification.plugins</name>
-      <set-method>addPlugin</set-method>
+      <set-method>addChildPlugin</set-method>
       <type>org.exoplatform.commons.notification.impl.DigestDailyPlugin</type>
       <description>Initial information for plugin.</description>
       <init-params>
         <object-param>
           <name>template.DigestDailyPlugin</name>
           <description>The template of DigestDailyPlugin</description>
+          <value-param>
+		        <name>templatePath</name>
+		        <value><![CDATA[war:/notification/templates/DigestDailyPlugin.gtmpl]]></value>
+		      </value-param>
           <object type="org.exoplatform.commons.api.notification.plugin.config.PluginConfig">
             <field name="pluginId">
               <string>DigestDailyPlugin</string>
             </field>
-            <field name="groupId">
-              <string></string>
-            </field>
-            <field name="templateConfig">
-              <object type="org.exoplatform.commons.api.notification.plugin.config.TemplateConfig">
-                <field name="bundlePath">
-                  <string>locale.notification.template.CommonsNotification</string>
-                </field>
-                <field name="templatePath">
-                  <string>war:/notification/templates/DigestDailyPlugin.gtmpl</string>
-                </field>
-              </object>
+            <field name="bundlePath">
+              <string>locale.notification.template.CommonsNotification</string>
             </field>
           </object>
         </object-param>
@@ -523,29 +517,23 @@
     <target-component>org.exoplatform.commons.api.notification.service.setting.PluginContainer</target-component>
     <component-plugin>
       <name>notification.plugins</name>
-      <set-method>addPlugin</set-method>
+      <set-method>addChildPlugin</set-method>
       <type>org.exoplatform.commons.notification.impl.DigestWeeklyPlugin</type>
       <description>Initial information for plugin.</description>
       <init-params>
         <object-param>
           <name>template.DigestWeeklyPlugin</name>
           <description>The template of DigestWeeklyPlugin</description>
+          <value-param>
+		        <name>templatePath</name>
+		        <value><![CDATA[war:/notification/templates/DigestWeeklyPlugin.gtmpl]]></value>
+		      </value-param>
           <object type="org.exoplatform.commons.api.notification.plugin.config.PluginConfig">
             <field name="pluginId">
               <string>DigestWeeklyPlugin</string>
             </field>
-            <field name="groupId">
-              <string></string>
-            </field>
-            <field name="templateConfig">
-              <object type="org.exoplatform.commons.api.notification.plugin.config.TemplateConfig">
-                <field name="bundlePath">
-                  <string>locale.notification.template.CommonsNotification</string>
-                </field>
-                <field name="templatePath">
-                  <string>war:/notification/templates/DigestWeeklyPlugin.gtmpl</string>
-                </field>
-              </object>
+            <field name="bundlePath">
+              <string>locale.notification.template.CommonsNotification</string>
             </field>
           </object>
         </object-param>

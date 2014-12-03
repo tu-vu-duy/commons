@@ -19,9 +19,8 @@ package org.exoplatform.commons.api.notification.command;
 import java.io.Writer;
 
 import org.exoplatform.commons.api.notification.NotificationContext;
-import org.exoplatform.commons.api.notification.model.MessageInfo;
-import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
+import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugin;
 
 public interface NotificationCommand {
@@ -37,13 +36,6 @@ public interface NotificationCommand {
    * @return The notification key.
    */
   NotificationKey getNotificationKey();
-  
-  /**
-   * Builds information of a message from the notification context.
-   * @param ctx The notification context.
-   * @return The message information.
-   */
-  MessageInfo processMessage(NotificationContext ctx);
   
   /**
    * Builds information of a notification from the notification context.

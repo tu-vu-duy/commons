@@ -35,23 +35,18 @@ import org.exoplatform.commons.notification.template.ResourceBundleConfigDeploye
 import org.exoplatform.commons.notification.template.TemplateUtils;
 import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.services.log.ExoLogger;
-import org.exoplatform.services.log.Log;
 import org.gatein.wci.ServletContainerFactory;
 import org.picocontainer.Startable;
 
 public class NotificationPluginContainer implements PluginContainer, Startable {
-  private static final Log LOG = ExoLogger.getLogger(NotificationPluginContainer.class);
-
   private final Map<NotificationKey, AbstractNotificationPlugin> pluginMap;
-
-  private GStringTemplateEngine gTemplateEngine;
-  
   //parent key and list child key
   private final Map<NotificationKey, List<NotificationKey>>      parentChildrenKeysMap;
 
   private PluginSettingService                                   pSettingService;
   private ResourceBundleConfigDeployer                           deployer;
-
+  private GStringTemplateEngine gTemplateEngine;
+  
   public NotificationPluginContainer() {
     pluginMap = new HashMap<NotificationKey, AbstractNotificationPlugin>();
     parentChildrenKeysMap = new HashMap<NotificationKey, List<NotificationKey>>();
@@ -69,7 +64,7 @@ public class NotificationPluginContainer implements PluginContainer, Startable {
       boolean isChild = (plugin instanceof AbstractNotificationChildPlugin);
       for (PluginConfig pluginConfig : plugin.getPluginConfigs()) {
         pSettingService.registerPluginConfig(pluginConfig.isChildPlugin(isChild));
-        datas.add(pluginConfig.getTemplateConfig().getBundlePath());
+        datas.add(pluginConfig.getBundlePath());
       }
     }
     //
@@ -99,8 +94,7 @@ public class NotificationPluginContainer implements PluginContainer, Startable {
 
   @Override
   public void addChildPlugin(AbstractNotificationChildPlugin plugin) {
-    registerPlugin(plugin);
-    
+    addPlugin(plugin);
     //
     List<String> parentIds = plugin.getParentPluginIds();
     NotificationKey parentKey;
@@ -116,29 +110,20 @@ public class NotificationPluginContainer implements PluginContainer, Startable {
       childrenKeys.add(plugin.getKey());
       parentChildrenKeysMap.put(parentKey, childrenKeys);
     }
-
+    //
+    String templatePath = plugin.getTemplatePath();
+    if (templatePath != null && templatePath.length() > 0) {
+      try {
+        String template = TemplateUtils.loadGroovyTemplate(templatePath);
+        plugin.setTemplateEngine(gTemplateEngine.createTemplate(template));
+      } catch (Exception e) {
+        ExoLogger.getExoLogger(getClass()).warn("Failed to build groovy template engine for: " + plugin.getId(), e);
+      }
+    }
   }
 
   @Override
   public void addPlugin(AbstractNotificationPlugin plugin) {
-    registerPlugin(plugin);
-  }
-
-  private void registerPlugin(AbstractNotificationPlugin plugin) {
-    try {
-      PluginConfig config = plugin.getPluginConfigs().get(0);
-      String templatePath = config.getTemplateConfig().getTemplatePath();
-      String template = TemplateUtils.loadGroovyTemplate(templatePath);
-      plugin.setTemplateEngine(gTemplateEngine.createTemplate(template));
-      
-      String intranetNotificationTemplatePath = config.getTemplateConfig().getIntranetTemplatePath();
-      if (intranetNotificationTemplatePath != null) {
-        String intranetNotificationTemplate = TemplateUtils.loadGroovyTemplate(intranetNotificationTemplatePath);
-        plugin.setIntranetNotificationEngine(gTemplateEngine.createTemplate(intranetNotificationTemplate));
-      }
-    } catch (Exception e) {
-      LOG.debug("Failed to register notification plugin " + plugin.getId());
-    }
     pluginMap.put(plugin.getKey(), plugin);
   }
 
@@ -147,6 +132,5 @@ public class NotificationPluginContainer implements PluginContainer, Startable {
     pluginMap.remove(key);
     return true;
   }
-
 
 }

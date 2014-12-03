@@ -33,6 +33,7 @@ import org.exoplatform.commons.api.notification.model.UserSetting;
 import org.exoplatform.commons.api.notification.plugin.GroupProviderPlugin;
 import org.exoplatform.commons.api.notification.plugin.config.GroupConfig;
 import org.exoplatform.commons.api.notification.plugin.config.PluginConfig;
+import org.exoplatform.commons.api.notification.service.setting.ChannelManager;
 import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
 import org.exoplatform.commons.api.settings.SettingService;
 import org.exoplatform.commons.api.settings.SettingValue;
@@ -59,9 +60,11 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
   private static final int DAYS_OF_MONTH = 31;
 
   private SettingService settingService;
+  private ChannelManager channelManager;
 
-  public PluginSettingServiceImpl(SettingService settingService) { 
+  public PluginSettingServiceImpl(SettingService settingService, ChannelManager channelManager) { 
     this.settingService = settingService;
+    this.channelManager = channelManager;
   }
 
   @Override
@@ -72,10 +75,10 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
       pluginInfo.setType(pluginConfig.getPluginId())
                   .setOrder(Integer.valueOf(pluginConfig.getOrder()))
                   .setResourceBundleKey(pluginConfig.getResourceBundleKey())
-                  .setBundlePath(pluginConfig.getTemplateConfig().getBundlePath())
+                  .setBundlePath(pluginConfig.getBundlePath())
                   .setDefaultConfig(pluginConfig.getDefaultConfig());
-      // for all chanel
-      pluginInfo.setChannelActives(getSettingPlugins(pluginConfig.getPluginId(), UserSetting.EMAIL_CHANNEL + "," + UserSetting.INTRANET_CHANNEL/*all channels*/));
+      //all channels
+      pluginInfo.setChannelActives(getSettingPlugins(pluginConfig.getPluginId(), NotificationUtils.listToString(channelManager.getChannelIds())));
       
       String groupId = pluginConfig.getGroupId();
       GroupConfig gConfig = pluginConfig.getGroupConfig();

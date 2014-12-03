@@ -1,14 +1,14 @@
 package org.exoplatform.commons.api.notification.plugin.config;
 
-public class ChannelConfig {
-  private String id;
+public class ChannelConfigPlugin {
+  private String channelId;
   private String resourceBundleKey = "";  
   private String order;
-  public String getId() {
-    return id;
+  public String getChannelId() {
+    return channelId;
   }
-  public void setId(String id) {
-    this.id = id;
+  public void setChannelId(String channelId) {
+    this.channelId = channelId;
   }
   public String getResourceBundleKey() {
     return resourceBundleKey;

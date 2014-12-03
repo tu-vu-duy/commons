@@ -22,31 +22,11 @@ import java.util.Map;
 public class TemplateConfig {
   public static final String  DEFAULT_SRC_RESOURCE_BUNDLE_KEY = "locale.notification.template.Notification";
   
-  public static final String  DEFAULT_SRC_RESOURCE_TEMPLATE_KEY = "war:/notification/templates";
-  
-  public static final String  DEFAULT_SRC_RESOURCE_INTRANET_TEMPLATE_KEY = "war:/intranet-notification/templates";
 
-  public static final String  SUBJECT_KEY              = "subject";
-
-  public static final String  DIGEST_KEY               = "digest";
-
-  public static final String  DIGEST_ONE_KEY           = "digest.one";
-
-  public static final String  DIGEST_THREE_KEY         = "digest.three";
-
-  public static final String  DIGEST_MORE_KEY          = "digest.more";
-
-  public static final String  FOOTER_KEY               = "footer";
 
   private String              providerId;
 
   private String              bundlePath;
-
-  private String              templatePath;
-
-  private String              intranetTemplatePath;
-
-  private Map<String, String> keyMapping               = new HashMap<String, String>();
 
   public TemplateConfig() {
     bundlePath = DEFAULT_SRC_RESOURCE_BUNDLE_KEY;
@@ -84,62 +64,6 @@ public class TemplateConfig {
    */
   public void setBundlePath(String bundlePath) {
     this.bundlePath = bundlePath;
-  }
-
-  /**
-   * @return the templatePath
-   */
-  public String getTemplatePath() {
-    if(templatePath == null) {
-      templatePath = new StringBuffer(DEFAULT_SRC_RESOURCE_TEMPLATE_KEY)
-                                .append("/").append(providerId).append(".gtmpl").toString();
-    }
-    return templatePath;
-  }
-
-  /**
-   * @param templatePath the templatePath to set
-   */
-  public void setTemplatePath(String templatePath) {
-    this.templatePath = templatePath;
-  }
-
-  public String getIntranetTemplatePath() {
-//    if(intranetTemplatePath == null) {
-//      intranetTemplatePath = new StringBuffer(DEFAULT_SRC_RESOURCE_INTRANET_TEMPLATE_KEY)
-//                                .append("/").append(providerId).append(".gtmpl").toString();
-//    }
-    return intranetTemplatePath;
-  }
-
-  public void setIntranetTemplatePath(String intranetTemplatePath) {
-    this.intranetTemplatePath = intranetTemplatePath;
-  }
-
-  /**
-   * @return the keyMapping
-   */
-  public Map<String, String> getKeyMapping() {
-    return keyMapping;
-  }
-
-  /**
-   * @param keyMapping the keyMapping to set
-   */
-  public void setKeyMapping(Map<String, String> keyMapping) {
-    this.keyMapping = keyMapping;
-  }
-
-  public TemplateConfig addKeyMapping(String key, String value) {
-    this.keyMapping.put(key, value);
-    return this;
-  }
-
-  public String getKeyValue(String key, String defaultValue) {
-    if (keyMapping.containsKey(key)) {
-      return keyMapping.get(key);
-    }
-    return defaultValue;
   }
 
   @Override
