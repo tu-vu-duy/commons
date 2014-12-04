@@ -34,7 +34,7 @@ public class ChildPluginTest extends AbstractNotificationChildPlugin {
     NotificationInfo notification = ctx.getNotificationInfo();
 
     String language = getLanguage(notification);
-    TemplateContext templateContext = new TemplateContext("email", getId(), language);
+    TemplateContext templateContext = new TemplateContext(getId(), language);
 
     String childContent = notification.getValueOwnerParameter("CHILD_VALUE");
     templateContext.put("CONTENT", childContent);

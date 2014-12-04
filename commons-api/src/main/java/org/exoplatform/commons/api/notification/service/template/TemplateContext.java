@@ -19,13 +19,15 @@ package org.exoplatform.commons.api.notification.service.template;
 import java.util.HashMap;
 import java.util.Locale;
 
+import org.exoplatform.commons.api.notification.model.UserSetting;
+
 public class TemplateContext extends HashMap<String, Object> {
   
   private static final long serialVersionUID = 1L;
 
   private String            pluginId;
 
-  private String            channelId;
+  private String            channelId        = UserSetting.EMAIL_CHANNEL;
 
   private String            language;
 
@@ -37,10 +39,16 @@ public class TemplateContext extends HashMap<String, Object> {
     
   }
 
-  public TemplateContext(String channelId, String pluginId, String language) {
-    this.channelId = channelId;
+  public TemplateContext(String pluginId, String language) {
+    this.channelId = UserSetting.EMAIL_CHANNEL;
     this.pluginId = pluginId;
     this.language = language;
+  }
+
+  public static TemplateContext newChannelInstance(String channelId, String pluginId, String language) {
+    TemplateContext context = new TemplateContext(pluginId, language);
+    context.channelId = channelId;
+    return context;
   }
   
   /**

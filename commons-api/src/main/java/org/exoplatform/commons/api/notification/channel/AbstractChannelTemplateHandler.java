@@ -13,13 +13,13 @@ import org.exoplatform.services.log.Log;
 public abstract class AbstractChannelTemplateHandler extends BaseComponentPlugin {
   protected static Log            LOG;
   protected String                channelId = "";
-  protected ChannelTemplateEngine engine    = null;
+  protected ChannelTemplateEngine templateEngine    = null;
   private int index = 0;
   
 
   public AbstractChannelTemplateHandler() {
     LOG = ExoLogger.getLogger(this.getClass());
-    engine = new ChannelTemplateEngine();
+    templateEngine = new ChannelTemplateEngine();
     channelId = getName();
     //
     ChannelConfigs config = this.getClass().getAnnotation(ChannelConfigs.class);
@@ -31,16 +31,16 @@ public abstract class AbstractChannelTemplateHandler extends BaseComponentPlugin
     }
     TemplateConfig[] tConfigs = config.templates();
     for (int i = 0; i < tConfigs.length; i++) {
-      engine.setPath(tConfigs[i].pluginId(), tConfigs[i].path());
+      templateEngine.setPath(tConfigs[i].pluginId(), tConfigs[i].path());
     }
   }
 
   public ChannelTemplateEngine getChannelTemplateEngine() {
-    return engine;
+    return templateEngine;
   }
 
-  public void setTemplateHandler(ChannelTemplateEngine templateHandler) {
-    this.engine = templateHandler;
+  public void setTemplateHandler(ChannelTemplateEngine templateEngine) {
+    this.templateEngine = templateEngine;
   }
   
   public int getIndex() {

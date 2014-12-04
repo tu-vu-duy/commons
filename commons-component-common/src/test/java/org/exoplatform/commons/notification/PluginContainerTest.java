@@ -86,7 +86,7 @@ public class PluginContainerTest extends BaseNotificationTestCase {
   }
 
   public void testRenderPlugin() throws Exception {
-    TemplateContext ctx = new TemplateContext("email", "DigestDailyPlugin", null);
+    TemplateContext ctx = new TemplateContext("DigestDailyPlugin", null);
     ctx.put("FIRSTNAME", "User ROOT");
     ctx.put("USER", "root");
     ctx.put("ACTIVITY", "Content of Activity");

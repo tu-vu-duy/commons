@@ -42,7 +42,7 @@ public class MockTestTemplateHandler extends AbstractChannelTemplateHandler {
       protected MessageInfo buildMessage(NotificationContext ctx, String channelId) {
         NotificationInfo notification = ctx.getNotificationInfo();
         String language = NotificationPluginUtils.getLanguage(notification.getTo());
-        TemplateContext templateContext = new TemplateContext(channelId, notification.getKey().getId(), language);
+        TemplateContext templateContext = TemplateContext.newChannelInstance(channelId, notification.getKey().getId(), language);
         
         
         templateContext.put("USER", notification.getValueOwnerParameter("USER"));

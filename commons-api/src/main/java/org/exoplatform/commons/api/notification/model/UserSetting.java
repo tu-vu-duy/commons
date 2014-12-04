@@ -265,7 +265,7 @@ public class UserSetting {
    * @return
    */
   public boolean isInChannel(String channelId, String pluginId) {
-    return (getPlugins(channelId).contains(pluginId));
+    return (EMAIL_CHANNEL.equals(channelId)) ? isInInstantly(pluginId) : (getPlugins(channelId).contains(pluginId));
   }
   
   /**
