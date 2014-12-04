@@ -196,6 +196,26 @@
   </external-component-plugins>
 
   <external-component-plugins>
+     <target-component>org.exoplatform.services.scheduler.JobSchedulerService</target-component>    
+     <component-plugin>
+     <name>AddCronJob</name>
+     <set-method>addCronJob</set-method>
+     <type>org.exoplatform.services.scheduler.CronJob</type>
+      <description>Add clean web notifications out of a month job to the JobSchedulerService</description>
+      <init-params>
+        <properties-param>
+          <name>cronjob.info</name>
+          <description>Configuration for cleaning web notifications out of one month</description>
+          <property name="jobName" value="IntranetNotificationsJob"/>
+          <property name="groupName" value="Notification"/>
+          <property name="job" value="org.exoplatform.commons.notification.job.IntranetNotificationsJob"/>
+          <property name="expression" value="${cronJob.notification.IntranetNotificationsJob.expression:0 0 23 ? * *}"/><!-- Run at 11:00pm every day -->
+        </properties-param>
+      </init-params>
+    </component-plugin>
+  </external-component-plugins>
+  
+  <external-component-plugins>
     <target-component>org.exoplatform.commons.api.notification.service.setting.PluginSettingService</target-component>
     <component-plugin>
       <name>notification.groups</name>
