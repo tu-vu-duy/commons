@@ -97,7 +97,6 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
         }
         groupPluginMap.put(groupId, groupProvider);
       }
-
       createParentNodeOfPlugin(pluginConfig.getPluginId());
     }
   }
@@ -141,9 +140,11 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
   @Override
   public void saveActivePlugin(String channelId, String pluginId, boolean isActive) {
     List<String> current = getSettingPlugins(pluginId, "");
-    if (isActive && !current.contains(channelId)) {
-      current.add(channelId);
-      saveActivePlugins(pluginId, NotificationUtils.listToString(current));
+    if (isActive) {
+      if (!current.contains(channelId)) {
+        current.add(channelId);
+        saveActivePlugins(pluginId, NotificationUtils.listToString(current));
+      }
     } else if (current.contains(channelId)) {
       current.remove(channelId);
       saveActivePlugins(pluginId, NotificationUtils.listToString(current));
@@ -160,21 +161,25 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
 
   private String getSetting(String pluginId, String defaultChannelIds) {
     SettingValue<?> sValue = settingService.get(Context.GLOBAL, Scope.GLOBAL, (NAME_SPACES + pluginId));
+    String channels = defaultChannelIds;
     if (sValue != null) {
-      String channels = String.valueOf(sValue.getValue());
+      channels = String.valueOf(sValue.getValue());
       if (channels.equals("true")) { // old data is true
         channels = UserSetting.EMAIL_CHANNEL;
       } else if (channels.equals("false") || channels.isEmpty()) {
-        channels = "";
+        channels = defaultChannelIds;
       }
-      //
-      if (defaultChannelIds != null && !defaultChannelIds.isEmpty()) {
-        channels = (channels.isEmpty()) ? "" : "," + defaultChannelIds;
-        saveActivePlugins(pluginId, channels);
-      }
-      return channels;
     }
-    return defaultChannelIds;
+    //
+    if (defaultChannelIds != null && !defaultChannelIds.isEmpty()) {
+      if(!defaultChannelIds.contains(channels) && !channels.isEmpty())  {
+        channels = "," + defaultChannelIds;
+      } else {
+        channels = defaultChannelIds;
+      }
+      saveActivePlugins(pluginId, channels);
+    }
+    return channels;
   }
 
   private boolean isActive(String channelId, String pluginId, boolean defaultValue) {

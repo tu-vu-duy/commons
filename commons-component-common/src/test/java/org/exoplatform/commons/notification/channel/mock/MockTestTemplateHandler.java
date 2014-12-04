@@ -14,57 +14,39 @@ import org.exoplatform.commons.api.notification.plugin.AbstractNotificationPlugi
 import org.exoplatform.commons.api.notification.plugin.NotificationPluginUtils;
 import org.exoplatform.commons.api.notification.service.setting.PluginContainer;
 import org.exoplatform.commons.api.notification.service.template.TemplateContext;
-import org.exoplatform.commons.notification.impl.DigestDailyPlugin;
-import org.exoplatform.commons.notification.impl.DigestWeeklyPlugin;
 import org.exoplatform.commons.notification.plugin.PluginTest;
 import org.exoplatform.commons.notification.template.TemplateUtils;
 import org.exoplatform.commons.utils.CommonsUtils;
 
 @ChannelConfigs (
-   id="email",
+   id = "test",
    templates = {
-       @TemplateConfig( pluginId=DigestDailyPlugin.ID, path="classpath:/groovy/notification/template/provider1.gtmpl"),
-       @TemplateConfig( pluginId=DigestWeeklyPlugin.ID, path="classpath:/groovy/notification/template/provider1.gtmpl"),
        @TemplateConfig( pluginId=PluginTest.ID, path="classpath:/groovy/notification/template/TestPlugin.gtmpl")
    }
 )
-public class MockChannalTemplateHandler extends AbstractChannelTemplateHandler {
-
+public class MockTestTemplateHandler extends AbstractChannelTemplateHandler {
+  public static final String CHANNEL_TEST = "test";
   @Override
   public MessageInfo makeMessage(NotificationContext ctx) {
     NotificationInfo notification = ctx.getNotificationInfo();
     MakeMessageInfo builder = MakeMessageInfo.get(notification.getKey().getId());
     if(builder != null) {
-      return builder.buildMessage(ctx);
+      return builder.buildMessage(ctx, channelId);
     }
     return null;
   }
 
   private enum MakeMessageInfo {
-    DigestDailyPlugin() {
-      @Override
-      protected MessageInfo buildMessage(NotificationContext ctx) {
-        MessageInfo info = new MessageInfo().pluginId(ctx.getNotificationInfo().getKey().getId());
-        return info;
-      }
-    },
-    DigestWeeklyPlugin() {
-      @Override
-      protected MessageInfo buildMessage(NotificationContext ctx) {
-        MessageInfo info = new MessageInfo().pluginId(ctx.getNotificationInfo().getKey().getId());
-        return info;
-      }
-    },
     TestPlugin() {
       @Override
-      protected MessageInfo buildMessage(NotificationContext ctx) {
+      protected MessageInfo buildMessage(NotificationContext ctx, String channelId) {
         NotificationInfo notification = ctx.getNotificationInfo();
         String language = NotificationPluginUtils.getLanguage(notification.getTo());
-        TemplateContext templateContext = new TemplateContext("email", notification.getKey().getId(), language);
+        TemplateContext templateContext = new TemplateContext(channelId, notification.getKey().getId(), language);
         
         
         templateContext.put("USER", notification.getValueOwnerParameter("USER"));
-        templateContext.put("SUBJECT", "Test plugin notification");
+        templateContext.put("SUBJECT", "Test plugin notification run on test channel");
         String subject = TemplateUtils.processSubject(templateContext);
 
         String value = notification.getValueOwnerParameter("TEST_VALUE");
@@ -91,7 +73,7 @@ public class MockChannalTemplateHandler extends AbstractChannelTemplateHandler {
       }
       return null;
     }
-    protected abstract MessageInfo buildMessage(NotificationContext ctx);
+    protected abstract MessageInfo buildMessage(NotificationContext ctx, String channelId);
   }
   
 }

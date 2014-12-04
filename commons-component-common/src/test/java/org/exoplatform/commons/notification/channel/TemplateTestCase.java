@@ -17,8 +17,6 @@ public class TemplateTestCase extends TestCase {
     ChannelTemplateEngine handler = channelHandler.getChannelTemplateEngine();
     
     assertEquals(3, handler.getPluginIds().size());
-    for (int i = 1; i < 4; i++) {
-      assertTrue(handler.getPluginIds().contains("test" + i));
-    }
+    assertTrue(handler.getPluginIds().contains("TestPlugin"));
   }
 }

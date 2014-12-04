@@ -16,8 +16,6 @@
  */
 package org.exoplatform.commons.api.notification.plugin.config;
 
-import java.util.HashMap;
-import java.util.Map;
 
 public class TemplateConfig {
   public static final String  DEFAULT_SRC_RESOURCE_BUNDLE_KEY = "locale.notification.template.Notification";

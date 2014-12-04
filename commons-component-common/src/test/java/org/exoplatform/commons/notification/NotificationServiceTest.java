@@ -20,9 +20,8 @@ import org.exoplatform.commons.api.notification.service.storage.NotificationServ
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.notification.job.NotificationJob;
 import org.exoplatform.commons.notification.plugin.PluginTest;
-import org.exoplatform.commons.testing.BaseCommonsTestCase;
 
-public class NotificationServiceTest extends BaseCommonsTestCase {
+public class NotificationServiceTest extends BaseNotificationTestCase {
   
   private NotificationService       notificationService;
   private NotificationDataStorage   notificationDataStorage;

@@ -38,13 +38,13 @@ public class PluginTest extends AbstractNotificationPlugin {
 
   @Override
   public boolean isValid(NotificationContext ctx) {
-    return false;
+    return true;
   }
 
   @Override
   protected NotificationInfo makeNotification(NotificationContext ctx) {
     NotificationInfo notificationInfo = NotificationInfo.instance();
-    return notificationInfo.to("demo").setTo("demo")
+    return notificationInfo.to("demo").setTo("demo").setFrom("root")
                             .with("USER", "root")
                             .with("TEST_VALUE", "Test value")
                             .with("CHILD_VALUE", "The content of child plugin ...")

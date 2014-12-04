@@ -44,7 +44,7 @@ public abstract class AbstractNotificationChildPlugin extends AbstractNotificati
       parentPluginIds.addAll(params.getValues());
     }
     ValueParam paramTemplatePath = initParams.getValueParam(TEMPLATE_PATH_KEY);
-    if(params != null) {
+    if(paramTemplatePath != null) {
       templatePath = paramTemplatePath.getValue();
     }
   }

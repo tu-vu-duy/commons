@@ -24,8 +24,8 @@ import org.exoplatform.commons.api.notification.model.ArgumentLiteral;
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.NotificationKey;
 import org.exoplatform.commons.api.notification.service.setting.ChannelManager;
-import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
 import org.exoplatform.commons.api.notification.service.setting.PluginContainer;
+import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
 
 public interface NotificationContext extends Cloneable {
 

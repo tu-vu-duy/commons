@@ -47,7 +47,17 @@
     <key>org.exoplatform.commons.api.notification.service.storage.IntranetNotificationDataStorage</key>
     <type>org.exoplatform.commons.notification.impl.service.storage.IntranetNotificationDataStorageImpl</type>
   </component>
-  
+
+  <component>
+    <key>org.exoplatform.commons.api.notification.service.setting.ChannelManager</key>
+    <type>org.exoplatform.commons.notification.impl.channel.ChannelManagerImpl</type>
+  </component>
+
+  <component>
+    <key>org.exoplatform.commons.api.notification.service.setting.ChannelTemplateContainer</key>
+    <type>org.exoplatform.commons.notification.impl.channel.ChannelTemplateContainerImpl</type>
+  </component>
+
   <component>
     <key>org.exoplatform.commons.api.settings.ExoFeatureService</key>
     <type>org.exoplatform.settings.impl.ExoFeatureServiceImpl</type>
@@ -308,38 +318,49 @@
   </external-component-plugins>
   
   <external-component-plugins>
-    <target-component>org.exoplatform.commons.api.notification.service.setting.ChannelSettingService</target-component>
+    <target-component>org.exoplatform.commons.api.notification.service.setting.ChannelManager</target-component>
     <component-plugin>
       <name>notification.channel</name>
-      <set-method>registerNotifChannelPlugin</set-method>
-      <type>org.exoplatform.commons.api.notification.plugin.NotificationChannelPlugin</type>
-      <description>Initialize default Channels.</description>
+      <set-method>registerChannel</set-method>
+      <type>org.exoplatform.commons.notification.impl.channel.EmailNotificationChannel</type>
+      <description>Initial information for channel.</description>
       <init-params>
         <object-param>
-          <name>email.channel</name>
+          <name>email</name>
           <description>Email Notifications Channel</description>
-          <object type="org.exoplatform.commons.api.notification.plugin.config.ChannelConfig">
-            <field name="id">
+          <object type="org.exoplatform.commons.api.notification.plugin.config.ChannelConfigPlugin">
+            <field name="channelId">
               <string>email</string>
             </field>
             <field name="resourceBundleKey">
-              <string>UINotification.label.channel.EmailNotificationChannel</string>
+              <string>UINotification.label.channel.email</string>
             </field>
             <field name="order">
               <string>1</string>
             </field>
           </object>
         </object-param>
-       
+      </init-params>
+    </component-plugin>
+  </external-component-plugins>
+
+  <external-component-plugins>
+    <target-component>org.exoplatform.commons.api.notification.service.setting.ChannelManager</target-component>
+    <component-plugin>
+      <name>notification.channel</name>
+      <set-method>registerChannel</set-method>
+      <type>org.exoplatform.commons.notification.impl.channel.IntranetNotificationChannel</type>
+      <description>Initial information for channel.</description>
+      <init-params>
         <object-param>
-          <name>intranet.channel</name>
+          <name>intranet</name>
           <description>Intranet Notifications Channel</description>
-          <object type="org.exoplatform.commons.api.notification.plugin.config.ChannelConfig">
-            <field name="id">
+          <object type="org.exoplatform.commons.api.notification.plugin.config.ChannelConfigPlugin">
+            <field name="channelId">
               <string>intranet</string>
             </field>
             <field name="resourceBundleKey">
-              <string>UINotification.label.channel.IntranetNotificationsChannel</string>
+              <string>UINotification.label.channel.intranet</string>
             </field>
             <field name="order">
               <string>2</string>
@@ -493,13 +514,13 @@
       <type>org.exoplatform.commons.notification.impl.DigestDailyPlugin</type>
       <description>Initial information for plugin.</description>
       <init-params>
+        <value-param>
+	        <name>templatePath</name>
+	        <value><![CDATA[war:/notification/templates/DigestDailyPlugin.gtmpl]]></value>
+	      </value-param>
         <object-param>
           <name>template.DigestDailyPlugin</name>
           <description>The template of DigestDailyPlugin</description>
-          <value-param>
-		        <name>templatePath</name>
-		        <value><![CDATA[war:/notification/templates/DigestDailyPlugin.gtmpl]]></value>
-		      </value-param>
           <object type="org.exoplatform.commons.api.notification.plugin.config.PluginConfig">
             <field name="pluginId">
               <string>DigestDailyPlugin</string>
@@ -521,13 +542,13 @@
       <type>org.exoplatform.commons.notification.impl.DigestWeeklyPlugin</type>
       <description>Initial information for plugin.</description>
       <init-params>
+        <value-param>
+	        <name>templatePath</name>
+	        <value><![CDATA[war:/notification/templates/DigestWeeklyPlugin.gtmpl]]></value>
+	      </value-param>
         <object-param>
           <name>template.DigestWeeklyPlugin</name>
           <description>The template of DigestWeeklyPlugin</description>
-          <value-param>
-		        <name>templatePath</name>
-		        <value><![CDATA[war:/notification/templates/DigestWeeklyPlugin.gtmpl]]></value>
-		      </value-param>
           <object type="org.exoplatform.commons.api.notification.plugin.config.PluginConfig">
             <field name="pluginId">
               <string>DigestWeeklyPlugin</string>
@@ -540,5 +561,5 @@
       </init-params>
     </component-plugin>
   </external-component-plugins>
-  
+
 </configuration>
