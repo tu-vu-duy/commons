@@ -87,10 +87,10 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
       }
       //
       if (groupPluginMap.containsKey(groupId)) {
-        groupPluginMap.get(groupId).addProviderData(pluginInfo);
+        groupPluginMap.get(groupId).addPluginInfo(pluginInfo);
       } else if (groupId != null && groupId.length() > 0) {
         GroupProvider groupProvider = new GroupProvider(groupId);
-        groupProvider.addProviderData(pluginInfo);
+        groupProvider.addPluginInfo(pluginInfo);
         if (gConfig != null) {
           groupProvider.setOrder(Integer.valueOf(gConfig.getOrder()));
           groupProvider.setResourceBundleKey(gConfig.getResourceBundleKey());
@@ -108,7 +108,7 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
       groupProvider.setOrder(Integer.valueOf(gconfig.getOrder()));
       groupProvider.setResourceBundleKey(gconfig.getResourceBundleKey());
       if (groupPluginMap.containsKey(gconfig.getId())) {
-        groupProvider.setProviderDatas(groupPluginMap.get(gconfig.getId()).getProviderDatas());
+        groupProvider.setPluginInfos(groupPluginMap.get(gconfig.getId()).getPluginInfos());
       }
       groupPluginMap.put(gconfig.getId(), groupProvider);
     }
@@ -128,7 +128,7 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
   public List<GroupProvider> getGroupPlugins() {
     List<GroupProvider> groupProviders = new ArrayList<GroupProvider>();
     for (GroupProvider groupPlugin : groupPluginMap.values()) {
-      for (PluginInfo pluginInfo : groupPlugin.getProviderDatas()) {
+      for (PluginInfo pluginInfo : groupPlugin.getPluginInfos()) {
         pluginInfo.setChannelActives(getSettingPlugins(pluginInfo.getType(), ""));
       }
       groupProviders.add(groupPlugin);
@@ -211,7 +211,7 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
   public List<PluginInfo> getActivePlugins(String channelId) {
     Set<PluginInfo> activePlugins = new HashSet<PluginInfo>();
     for (GroupProvider groupPlugin : groupPluginMap.values()) {
-      for (PluginInfo pluginInfo : groupPlugin.getProviderDatas()) {
+      for (PluginInfo pluginInfo : groupPlugin.getPluginInfos()) {
         if (isActive(channelId, pluginInfo.getType())) {
           activePlugins.add(pluginInfo);
         }
@@ -224,7 +224,7 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
   public List<PluginInfo> getAllPlugins() {
     Set<PluginInfo> activePlugins = new HashSet<PluginInfo>();
     for (GroupProvider groupPlugin : groupPluginMap.values()) {
-      for (PluginInfo pluginInfo : groupPlugin.getProviderDatas()) {
+      for (PluginInfo pluginInfo : groupPlugin.getPluginInfos()) {
         activePlugins.add(pluginInfo);
       }
     }

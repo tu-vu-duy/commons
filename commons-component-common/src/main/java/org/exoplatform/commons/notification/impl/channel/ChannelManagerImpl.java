@@ -7,10 +7,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.exoplatform.commons.api.notification.channel.AbstractChannel;
+import org.exoplatform.commons.api.notification.model.UserSetting;
 import org.exoplatform.commons.api.notification.service.setting.ChannelManager;
 
 public class ChannelManagerImpl implements ChannelManager {
   private Map<String, AbstractChannel> channelPlugins = new HashMap<String, AbstractChannel>();
+  private List<String> channelIds;
   
   public ChannelManagerImpl() {
   }
@@ -26,7 +28,16 @@ public class ChannelManagerImpl implements ChannelManager {
   }
   
   public List<String> getChannelIds() {
-    return new ArrayList<String>(channelPlugins.keySet());
+    if (channelIds == null) {
+      channelIds = new ArrayList<String>();
+      channelIds.add(UserSetting.EMAIL_CHANNEL);
+      for (String channelId : channelPlugins.keySet()) {
+        if (!UserSetting.EMAIL_CHANNEL.equals(channelId)) {
+          channelIds.add(channelId);
+        }
+      }
+    }
+    return channelIds;
   }
   
   @Override
