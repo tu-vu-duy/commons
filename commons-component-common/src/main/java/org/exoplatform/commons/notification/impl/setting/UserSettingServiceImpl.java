@@ -17,14 +17,11 @@
 package org.exoplatform.commons.notification.impl.setting;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
-import javax.jcr.Property;
-import javax.jcr.PropertyIterator;
 import javax.jcr.Session;
 import javax.jcr.query.Query;
 import javax.jcr.query.QueryManager;
@@ -62,7 +59,7 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
 
   protected static final int MAX_LIMIT = 30;
 
-  public static final String NAME_PATTERN = "exo:channel";
+  public static final String NAME_PATTERN = "exo:{CHANNELID}Channel";
   
   transient final ReentrantLock lock = new ReentrantLock();
   
@@ -89,10 +86,10 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   public void save(UserSetting model) {
 
     String userId = model.getUserId();
-    String instantlys = NotificationUtils.listToString(model.getInstantlyPlugins());
-    String dailys = NotificationUtils.listToString(model.getDailyPlugins());
-    String weeklys = NotificationUtils.listToString(model.getWeeklyPlugins());
-    String channelActives = NotificationUtils.listToString(model.getChannelActives());
+    String instantlys = NotificationUtils.listToString(model.getInstantlyPlugins(), VALUE_PATTERN);
+    String dailys = NotificationUtils.listToString(model.getDailyPlugins(), VALUE_PATTERN);
+    String weeklys = NotificationUtils.listToString(model.getWeeklyPlugins(), VALUE_PATTERN);
+    String channelActives = NotificationUtils.listToString(model.getChannelActives(), VALUE_PATTERN);
 
     // Save plugins active
     List<String> channels = new ArrayList<String>(model.getAllChannelPlugins().keySet());
@@ -100,7 +97,7 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
       if(channelId.equals(UserSetting.EMAIL_CHANNEL)) {
         continue;
       }
-      saveUserSetting(userId, NAME_PATTERN + channelId, NotificationUtils.listToString(model.getPlugins(channelId)));
+      saveUserSetting(userId, getChannelProperty(channelId), NotificationUtils.listToString(model.getPlugins(channelId), VALUE_PATTERN));
     }
     //
     saveUserSetting(userId, EXO_INSTANTLY, instantlys);
@@ -110,6 +107,10 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
     saveUserSetting(userId, EXO_IS_ACTIVE, channelActives);
 
     removeMixin(userId);
+  }
+
+  private String getChannelProperty(String channelId) {
+    return NAME_PATTERN.replace("{CHANNELID}", channelId);
   }
 
   /**
@@ -134,7 +135,7 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
       // for all channel to set plugin
       List<String> channels = channelManager.getChannelIds();
       for (String channelId : channels) {
-        model.setChannelPlugins(channelId, getArrayListValue(userId, NAME_PATTERN + channelId, new ArrayList<String>()));
+        model.setChannelPlugins(channelId, getArrayListValue(userId, getChannelProperty(channelId), new ArrayList<String>()));
       }
       //
       model.setInstantlyPlugins(instantlys);
@@ -161,9 +162,9 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
         strs = UserSetting.EMAIL_CHANNEL;
       }
       if ("false".equals(strs)) {
-        return new ArrayList<String>();
+        return defaultValue;
       }
-      return new ArrayList<String>(Arrays.asList(strs.split(",")));
+      return NotificationUtils.stringToList(getValues(strs));
     }
     return defaultValue;
   }
@@ -264,7 +265,7 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
       }
       
       StringBuilder strQuery = new StringBuilder("SELECT * FROM ").append(STG_SCOPE);
-      strQuery.append(" WHERE (").append(EXO_IS_ACTIVE).append("='false' OR ").append(EXO_IS_ACTIVE).append("='')");
+      strQuery.append(" WHERE (").append(EXO_IS_ACTIVE).append("='')");
       
       QueryManager qm = session.getWorkspace().getQueryManager();
       QueryImpl query = (QueryImpl) qm.createQuery(strQuery.toString(), Query.SQL);
@@ -346,7 +347,7 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
     if(session.getRootNode().hasNode(SETTING_USER_PATH) == false) {
       return null;
     }
-    String property = NAME_PATTERN + channelId;
+    String property = getChannelProperty(channelId);
     StringBuilder strQuery = new StringBuilder("SELECT * FROM ").append(STG_SCOPE);
     
     strQuery.append(" WHERE")
@@ -416,7 +417,7 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
     if (values.trim().length() == 0) {
       return new ArrayList<String>();
     }
-    return Arrays.asList(values.split(","));
+    return NotificationUtils.stringToList(getValues(values));
   }
 
   /**
@@ -433,11 +434,11 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
     model.setWeeklyPlugins(getValues(node, EXO_WEEKLY));
     model.setInstantlyPlugins(getValues(node, EXO_INSTANTLY));
     //
-    model.setChannelActives(NotificationUtils.stringToList(node.getProperty(EXO_IS_ACTIVE).getString()));
-    PropertyIterator iterator = node.getProperties(NAME_PATTERN);
-    while (iterator.hasNext()) {
-      Property p = iterator.nextProperty();
-      model.setChannelPlugins(p.getName().replaceFirst(NAME_PATTERN, ""), NotificationUtils.stringToList(p.getString()));
+    model.setChannelActives(getValues(node, EXO_IS_ACTIVE));
+    //
+    List<String> channels = channelManager.getChannelIds();
+    for (String channelId : channels) {
+      model.setChannelPlugins(channelId, getValues(node, getChannelProperty(channelId)));
     }
     //
     model.setLastUpdateTime(node.getParent().getProperty(EXO_LAST_MODIFIED_DATE).getDate());
@@ -487,11 +488,8 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   
   private String buildSQLLikeProperty(String property, String value) {
     StringBuilder strQuery = new StringBuilder(" (")
-            .append(property).append("='").append(value).append("'")
-            .append(" OR ").append(property).append("='true'")
-            .append(" OR ").append(property).append(" LIKE '%,").append(value).append(",%'")
-            .append(" OR ").append(property).append(" LIKE '%,").append(value).append("'")
-            .append(" OR ").append(property).append(" LIKE '").append(value).append(",%'")
+            .append(property).append("='true'").append(" OR ")
+            .append(property).append(" LIKE '%").append(getValue(value)).append("%'")
             .append(")");
     return strQuery.toString();
   }

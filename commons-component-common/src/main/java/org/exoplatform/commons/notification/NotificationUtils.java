@@ -141,10 +141,27 @@ public class NotificationUtils {
     }
     return values.toString();
   }
+
+  public static String listToString(List<String> list, String pattern) {
+    if (list == null || list.size() == 0) {
+      return "";
+    }
+    StringBuffer values = new StringBuffer();
+    for (String str : list) {
+      if (values.length() > 0) {
+        values.append(",");
+      }
+      values.append(pattern.replace("VALUE", str));
+    }
+    return values.toString();
+  }
   
   public static List<String> stringToList(String value) {
-    StringTokenizer tokenizer = new StringTokenizer(value, ",");
     List<String> result = new ArrayList<String>();
+    if (value == null || value.isEmpty()) {
+      return result;
+    }
+    StringTokenizer tokenizer = new StringTokenizer(value, ",");
     while (tokenizer.hasMoreTokens()) {
       result.add(tokenizer.nextToken());
     }

@@ -78,7 +78,7 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
                   .setBundlePath(pluginConfig.getBundlePath())
                   .setDefaultConfig(pluginConfig.getDefaultConfig());
       //all channels
-      pluginInfo.setChannelActives(getSettingPlugins(pluginConfig.getPluginId(), NotificationUtils.listToString(channelManager.getChannelIds())));
+      pluginInfo.setChannelActives(getSettingPlugins(pluginConfig.getPluginId(), channelManager.getChannelIds()));
       
       String groupId = pluginConfig.getGroupId();
       GroupConfig gConfig = pluginConfig.getGroupConfig();
@@ -129,7 +129,7 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
     List<GroupProvider> groupProviders = new ArrayList<GroupProvider>();
     for (GroupProvider groupPlugin : groupPluginMap.values()) {
       for (PluginInfo pluginInfo : groupPlugin.getPluginInfos()) {
-        pluginInfo.setChannelActives(getSettingPlugins(pluginInfo.getType(), ""));
+        pluginInfo.setChannelActives(getSettingPlugins(pluginInfo.getType()));
       }
       groupProviders.add(groupPlugin);
     }
@@ -139,7 +139,7 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
 
   @Override
   public void saveActivePlugin(String channelId, String pluginId, boolean isActive) {
-    List<String> current = getSettingPlugins(pluginId, "");
+    List<String> current = getSettingPlugins(pluginId);
     if (isActive) {
       if (!current.contains(channelId)) {
         current.add(channelId);
@@ -151,39 +151,43 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
     }
   }
 
-  public void saveActivePlugins(String pluginId, String channelIds) {
+  private void saveActivePlugins(String pluginId, List<String> channels) {
+    saveActivePlugins(pluginId, NotificationUtils.listToString(channels, VALUE_PATTERN));
+  }
+
+  private void saveActivePlugins(String pluginId, String channelIds) {
     settingService.set(Context.GLOBAL, Scope.GLOBAL, (NAME_SPACES + pluginId), SettingValue.create(channelIds));
   }
 
-  private List<String> getSettingPlugins(String pluginId, String defaultValue) {
-    return NotificationUtils.stringToList(getSetting(pluginId, defaultValue));
+  private List<String> getSettingPlugins(String pluginId, List<String> defaultValue) {
+    return NotificationUtils.stringToList(getSetting(pluginId, NotificationUtils.listToString(defaultValue)));
   }
 
-  private String getSetting(String pluginId, String defaultChannelIds) {
+  private List<String> getSettingPlugins(String pluginId) {
+    return getSettingPlugins(pluginId, null);
+  }
+
+  private String getSetting(String pluginId, String defaultValues) {
     SettingValue<?> sValue = settingService.get(Context.GLOBAL, Scope.GLOBAL, (NAME_SPACES + pluginId));
-    String channels = defaultChannelIds;
+    String channels = defaultValues;
+    String values = "";
     if (sValue != null) {
-      channels = String.valueOf(sValue.getValue());
-      if (channels.equals("true")) { // old data is true
-        channels = UserSetting.EMAIL_CHANNEL;
-      } else if (channels.equals("false") || channels.isEmpty()) {
-        channels = defaultChannelIds;
+      values = String.valueOf(sValue.getValue());
+      if ("false".equals(values)) {
+        channels = defaultValues.replace(UserSetting.EMAIL_CHANNEL, "");
+      } else if (!"true".equals(values)) {
+        channels = getValues(values);
       }
     }
-    //
-    if (defaultChannelIds != null && !defaultChannelIds.isEmpty()) {
-      if(!defaultChannelIds.contains(channels) && !channels.isEmpty())  {
-        channels = "," + defaultChannelIds;
-      } else {
-        channels = defaultChannelIds;
-      }
-      saveActivePlugins(pluginId, channels);
+    // Upgrade old data
+    if (!defaultValues.isEmpty() && (sValue == null || values.equals("true") || values.equals("false"))) {
+      saveActivePlugins(pluginId, NotificationUtils.stringToList(channels));
     }
     return channels;
   }
 
   private boolean isActive(String channelId, String pluginId, boolean defaultValue) {
-    List<String> current = getSettingPlugins(pluginId, (defaultValue) ? channelId : "");
+    List<String> current = getSettingPlugins(pluginId);
     if(current.contains(channelId)) {
       return true;
     }
@@ -204,7 +208,7 @@ public class PluginSettingServiceImpl extends AbstractService implements PluginS
         activePluginIds.add(pluginConfig.getPluginId());
       }
     }
-    return new ArrayList<String>(activePluginIds);
+    return Collections.unmodifiableList(new ArrayList<String>(activePluginIds));
   }
 
   @Override
