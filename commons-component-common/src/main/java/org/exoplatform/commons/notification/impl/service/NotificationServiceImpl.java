@@ -86,7 +86,7 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
       }
       //
       if (notification.isSendAll()) {
-        userIds = userSettingService.getUserHasNotifSetting(channelPlugin.getId(), pluginId);
+        userIds = userSettingService.getUserHasSettingPlugin(channelPlugin.getId(), pluginId);
       }
       for (String userId : userIds) {
         UserSetting userSetting = userSettingService.get(userId);
