@@ -86,7 +86,6 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   public void save(UserSetting model) {
 
     String userId = model.getUserId();
-    String instantlys = NotificationUtils.listToString(model.getInstantlyPlugins(), VALUE_PATTERN);
     String dailys = NotificationUtils.listToString(model.getDailyPlugins(), VALUE_PATTERN);
     String weeklys = NotificationUtils.listToString(model.getWeeklyPlugins(), VALUE_PATTERN);
     String channelActives = NotificationUtils.listToString(model.getChannelActives(), VALUE_PATTERN);
@@ -94,13 +93,9 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
     // Save plugins active
     List<String> channels = new ArrayList<String>(model.getAllChannelPlugins().keySet());
     for (String channelId : channels) {
-      if(channelId.equals(UserSetting.EMAIL_CHANNEL)) {
-        continue;
-      }
       saveUserSetting(userId, getChannelProperty(channelId), NotificationUtils.listToString(model.getPlugins(channelId), VALUE_PATTERN));
     }
     //
-    saveUserSetting(userId, EXO_INSTANTLY, instantlys);
     saveUserSetting(userId, EXO_DAILY, dailys);
     saveUserSetting(userId, EXO_WEEKLY, weeklys);
     //
@@ -128,17 +123,16 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
   public UserSetting get(String userId) {
     UserSetting model = UserSetting.getInstance();
 
-    List<String> instantlys = getArrayListValue(userId, EXO_INSTANTLY, null);
-    if (instantlys != null) {
+    List<String> actives = getArrayListValue(userId, EXO_IS_ACTIVE, null);
+    if (actives != null) {
       model.setUserId(userId);
-      model.setChannelActives(getArrayListValue(userId, EXO_IS_ACTIVE, new ArrayList<String>()));
+      model.setChannelActives(actives);
       // for all channel to set plugin
       List<String> channels = channelManager.getChannelIds();
       for (String channelId : channels) {
         model.setChannelPlugins(channelId, getArrayListValue(userId, getChannelProperty(channelId), new ArrayList<String>()));
       }
       //
-      model.setInstantlyPlugins(instantlys);
       model.setDailyPlugins(getArrayListValue(userId, EXO_DAILY, new ArrayList<String>()));
       model.setWeeklyPlugins(getArrayListValue(userId, EXO_WEEKLY, new ArrayList<String>()));
       //
@@ -413,11 +407,12 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
    * @throws Exception
    */
   private List<String> getValues(Node node, String propertyName) throws Exception {
-    String values = node.getProperty(propertyName).getString();
-    if (values.trim().length() == 0) {
+    try {
+      String values = node.getProperty(propertyName).getString();
+      return NotificationUtils.stringToList(getValues(values));
+    } catch (Exception e) {
       return new ArrayList<String>();
     }
-    return NotificationUtils.stringToList(getValues(values));
   }
 
   /**
@@ -432,7 +427,6 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
     model.setUserId(node.getParent().getName());
     model.setDailyPlugins(getValues(node, EXO_DAILY));
     model.setWeeklyPlugins(getValues(node, EXO_WEEKLY));
-    model.setInstantlyPlugins(getValues(node, EXO_INSTANTLY));
     //
     model.setChannelActives(getValues(node, EXO_IS_ACTIVE));
     //
