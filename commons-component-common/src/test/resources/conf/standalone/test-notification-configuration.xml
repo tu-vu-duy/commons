@@ -11,6 +11,11 @@
   </component>
   
   <component>
+    <key>org.exoplatform.commons.notification.mock.MockNotificationOrganizationUser</key>
+    <type>org.exoplatform.commons.notification.impl.setting.NotificationOrganizationUserImpl</type>
+  </component>
+
+  <component>
     <key>org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage</key>
     <type>org.exoplatform.commons.notification.impl.service.storage.NotificationDataStorageImpl</type>
   </component>

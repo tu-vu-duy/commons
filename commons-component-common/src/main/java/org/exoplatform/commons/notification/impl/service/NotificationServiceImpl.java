@@ -33,6 +33,7 @@ import org.exoplatform.commons.api.notification.model.PluginKey;
 import org.exoplatform.commons.api.notification.model.UserSetting;
 import org.exoplatform.commons.api.notification.model.UserSetting.FREQUENCY;
 import org.exoplatform.commons.api.notification.service.QueueMessage;
+import org.exoplatform.commons.api.notification.service.setting.NotificationOrganizationUser;
 import org.exoplatform.commons.api.notification.service.setting.PluginSettingService;
 import org.exoplatform.commons.api.notification.service.setting.UserSettingService;
 import org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage;
@@ -43,10 +44,8 @@ import org.exoplatform.commons.notification.NotificationUtils;
 import org.exoplatform.commons.notification.impl.AbstractService;
 import org.exoplatform.commons.notification.impl.NotificationContextImpl;
 import org.exoplatform.commons.utils.CommonsUtils;
-import org.exoplatform.commons.utils.ListAccess;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
-import org.exoplatform.services.organization.OrganizationService;
 import org.exoplatform.services.organization.User;
 
 public class NotificationServiceImpl extends AbstractService implements NotificationService {
@@ -174,51 +173,33 @@ public class NotificationServiceImpl extends AbstractService implements Notifica
                                          UserSetting defaultSetting,
                                          List<UserSetting> sentUsers) throws Exception {
     
-    OrganizationService organizationService = CommonsUtils.getService(OrganizationService.class);
-    CommonsUtils.startRequest(organizationService);
-    ListAccess<User> allUsers = null;
-    try {
-      allUsers= organizationService.getUserHandler().findAllUsers();
-    } finally {
-      CommonsUtils.endRequest(organizationService);
-    }
-    int size = allUsers.getSize(), limit = 200;
-    int index = 0, length = Math.min(limit, size);
+    NotificationOrganizationUser notificationUser = CommonsUtils.getService(NotificationOrganizationUser.class);
+    List<User> allUsers = notificationUser.getAllUsers();
+    int size = allUsers.size();
     //only lazy adding mixin-type(defaultSetting) when the user's size > sent notification's size.
     if (size > sentUsers.size()) {
       List<User> addMixinUsers = new ArrayList<User>();
       List<UserSetting> usersDefaultSettings = new ArrayList<UserSetting>();
 
-      while (index < size && length > 0) {
         usersDefaultSettings = new ArrayList<UserSetting>();
-        //
-        LOG.debug(String.format("Load from %s to %s, length %s", index, (index + length), length));
-        User[] users = allUsers.load(index, length);
-        if (users.length == 0) {
-          break;
-        }
         UserSetting userSetting;
         Calendar cal = Calendar.getInstance();
-        for (int i = 0; i < users.length; i++) {
-          userSetting = UserSetting.getInstance().setUserId(users[i].getUserName());
+        for (User user : allUsers) {
+          userSetting = UserSetting.getInstance().setUserId(user.getUserName());
           if (!sentUsers.contains(userSetting)) {
             //
-            if (users[i].getCreatedDate() != null) {
-              cal.setTime(users[i].getCreatedDate());
+            if (user.getCreatedDate() != null) {
+              cal.setTime(user.getCreatedDate());
             } else {
               cal.setTime(Calendar.getInstance().getTime());
             }
             usersDefaultSettings.add(userSetting.setLastUpdateTime(cal));
             //
-            addMixinUsers.add(users[i]);
+            addMixinUsers.add(user);
           }
         }
         //
         sendDefault(context, usersDefaultSettings, defaultSetting);
-
-        index += length;
-        length = Math.min(limit, size - index);
-      }
 
       LOG.debug("Done sent notification for " + addMixinUsers.size() + " users must addMixin.");
       //

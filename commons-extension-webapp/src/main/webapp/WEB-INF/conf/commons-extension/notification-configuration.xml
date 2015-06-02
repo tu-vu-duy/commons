@@ -37,6 +37,11 @@
     <key>org.exoplatform.commons.api.notification.channel.ChannelManager</key>
     <type>org.exoplatform.commons.notification.channel.ChannelManagerImpl</type>
   </component>
+
+  <component profiles="all">
+    <key>org.exoplatform.commons.api.notification.service.setting.NotificationOrganizationUser</key>
+    <type>org.exoplatform.commons.notification.impl.setting.NotificationOrganizationUserImpl</type>
+  </component>
   
   <component profiles="all">
     <key>org.exoplatform.commons.api.notification.service.storage.NotificationDataStorage</key>
